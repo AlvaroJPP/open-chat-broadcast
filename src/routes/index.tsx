@@ -37,6 +37,6 @@ function KioskApp() {
     <div>
       {/* Your JSX content goes here */}
       Ola mundo!
-    </>
+    </div>
   );
 }
