@@ -10,8 +10,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "cmd:server": "node cmd/server.js",
-    "cmd:server:dev": "nodemon cmd/server.js",
+    "cli:server": "tsx cli/server.js",
+    "cli:server:dev": "tsx --watch cli/server.js",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -52,6 +52,7 @@
     "cmdk": "^1.1.1",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
+    "dotenv": "^18.0.1",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.0",
     "input-otp": "^1.4.2",
@@ -85,6 +86,7 @@
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
     "prettier": "^3.7.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.2.0"
