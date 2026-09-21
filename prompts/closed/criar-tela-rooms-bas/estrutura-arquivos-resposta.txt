@@ -1,0 +1,32 @@
+src/
+├── components/
+│   ├── broadcast/
+│   │   ├── BroadcastHeader.tsx      # topo: logo, sala, link, controles, menu da conta
+│   │   ├── HeaderIconButton.tsx     # botão icon+tooltip usado no header
+│   │   ├── ParticipantsPanel.tsx    # card "Participantes" (sidebar esquerda)
+│   │   ├── ParticipantItem.tsx      # linha de cada participante
+│   │   ├── RoomPanel.tsx            # card "Sala" (link + convidar)
+│   │   ├── StreamView.tsx           # painel central "AO VIVO" / tela transmitida
+│   │   ├── CodeEditorPreview.tsx    # mock do editor de código dentro do StreamView
+│   │   ├── ChatPanel.tsx            # painel de chat (sidebar direita)
+│   │   ├── ChatMessage.tsx          # bolha/linha de mensagem
+│   │   ├── ChatInput.tsx            # campo de digitar + enviar
+│   │   └── RoomLayout.tsx           # junta tudo (header + 3 colunas)
+│   │
+│   └── ui/
+│       ├── avatar.tsx               # wrapper @radix-ui/react-avatar
+│       ├── badge.tsx                # pill (Ao vivo, Você, contador)
+│       ├── button.tsx               # botão com variants (cva)
+│       ├── dropdown-menu.tsx        # wrapper @radix-ui/react-dropdown-menu
+│       ├── scroll-area.tsx          # wrapper @radix-ui/react-scroll-area
+│       ├── separator.tsx            # wrapper @radix-ui/react-separator
+│       └── tooltip.tsx              # wrapper @radix-ui/react-tooltip
+│
+├── lib/
+│   ├── types.ts                     # Participant, ChatMessageData, RoomInfo
+│   ├── mock-data.ts                 # dados de exemplo (trocar por API/socket)
+│   └── utils.ts                     # cn() — helper clsx + tailwind-merge
+│
+└── routes/
+    └── rooms/
+        └── $id.tsx                  # rota /rooms/:id (renderiza RoomLayout)

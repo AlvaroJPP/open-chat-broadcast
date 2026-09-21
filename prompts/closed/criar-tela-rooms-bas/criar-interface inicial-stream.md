@@ -1,20 +1,33 @@
-{
-  "name": "tanstack_start_ts",
-  "private": true,
-  "sideEffects": false,
-  "type": "module",
-  "scripts": {
-    "dev": "vite dev",
-    "dev:server": "node services/server/index.js",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
-    "preview": "vite preview",
-    "lint": "eslint .",
-    "cli:server": "tsx cli/server.js",
-    "cli:server:dev": "tsx --watch cli/server.js",
-    "format": "prettier --write ."
-  },
-  "dependencies": {
+![Imagem prototipo exemplo aplicacao](image-1.png)
+
+Minha Aplicacao sera um chat online que permite transmissao da aplicacao. separei em front e backand. vc e responsavel pelo front-end.
+
+minha aplicacao usa react com vite. 
+minha estrutura e:
+  public/
+    | - images/
+    | - robots.txt
+  src/
+    |- components/ui
+    |- hooks/
+    |- lib/
+    |- routes/
+            |- index.tsx // pagina utilizando export const Route = createFileRoute("/")({
+            |- __root.tsx
+            |- pagina2.tsx
+  main.tsx
+  router.tsx
+  routeTree.gen.tsx
+  styles.css
+  theme-dark-mode.css
+  theme-light-mode.css
+  index.html
+  vite.config.ts
+
+  ---
+
+  Essa e a listade deps que o proetop possui, podes adicionar mais para estilo se for necessario,, mas de preferencia, utilize o que tem:
+  ```
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -52,7 +65,6 @@
     "cmdk": "^1.1.1",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
-    "dotenv": "^18.0.1",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.0",
     "input-otp": "^1.4.2",
@@ -67,28 +79,16 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.3.4",
-    "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
     "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "^2.15.0",
-    "@types/node": "^22.16.5",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^5.2.0",
-    "eslint": "^9.32.0",
-    "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-prettier": "^5.2.6",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "globals": "^15.15.0",
-    "nitro": "3.0.260603-beta",
-    "prettier": "^3.7.3",
-    "tsx": "^4.23.15",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.56.1",
-    "vite": "^8.2.0"
-  }
-}
+  ```
+
+  Precioso que crie a estrutura de uma pagina igual a imagem que lhe enviei. Utilze os components do react de modo que seja reutilizavel o codigo. 
+
+* A imagem sera anexada junto a esse prompt.
+* A rota deve ser `/rooms/:id `
+
+
+  --- 
+
+  Meu stilo utiliza tailwindcss. le enviarei meu styles.css e um arquivo de theme-dark-mode.css para entender os estilos e cores disponiveis para reutilizar ou criar novas, caso necessario.
