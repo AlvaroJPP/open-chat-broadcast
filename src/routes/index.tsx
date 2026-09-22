@@ -1,42 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
-import {
-  CheckCircle2,
-  CreditCard,
-  CircleCheckBig,
-  IdCard,
-  Keyboard as KeyboardIcon,
-  Ticket,
-} from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 
+import { HomeLayout } from "@/components/home/HomeLayout";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Ola mundo!" },
-      {
-        name: "description",
-        content:
-          "Ola mundo!",
-      },
-      { property: "og:title", content: "Ola mundo!" },
-      {
-        property: "og:description",
-        content:
-          "Ola mundo!",
-      },
-    ],
-  }),
-  component: KioskApp,
+  component: HomeLayout,
 });
-
-
-function KioskApp() {
-
-  return (
-    <div>
-      {/* Your JSX content goes here */}
-      Ola mundo!
-    </div>
-  );
-}
