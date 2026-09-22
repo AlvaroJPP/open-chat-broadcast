@@ -35,6 +35,12 @@ export function useWebRTC({
             new Map()
         );
 
+    const cameraStreamRef =
+        useRef<MediaStream | null>(null);
+
+    const screenStreamRef =
+        useRef<MediaStream | null>(null);
+
     const localStreamRef =
         useRef<MediaStream | null>(null);
 
@@ -52,6 +58,9 @@ export function useWebRTC({
         );
 
     const [connected, setConnected] =
+        useState(false);
+
+    const [isScreenSharing, setIsScreenSharing] =
         useState(false);
 
     const createPeerConnection =
@@ -154,13 +163,57 @@ export function useWebRTC({
             [roomId, userId]
         );
 
-    const startLocalMedia =
-        useCallback(async () => {
-            if (localStreamRef.current) {
-                return localStreamRef.current;
+    const updateLocalStream = useCallback(
+        (
+            cameraStream: MediaStream,
+            screenStream?: MediaStream | null
+        ) => {
+            const tracks: MediaStreamTrack[] = [];
+
+            if (screenStream) {
+                const screenVideo =
+                    screenStream.getVideoTracks()[0];
+
+                if (screenVideo) {
+                    tracks.push(screenVideo);
+                }
+            } else {
+                const cameraVideo =
+                    cameraStream.getVideoTracks()[0];
+
+                if (cameraVideo) {
+                    tracks.push(cameraVideo);
+                }
+            }
+
+            const microphone =
+                cameraStream.getAudioTracks()[0];
+
+            if (microphone) {
+                tracks.push(microphone);
             }
 
             const stream =
+                new MediaStream(tracks);
+
+            localStreamRef.current = stream;
+            setLocalStream(stream);
+
+            return stream;
+        },
+        []
+    );
+
+    const startLocalMedia =
+        useCallback(async () => {
+            if (cameraStreamRef.current) {
+                return (
+                    localStreamRef.current ??
+                    cameraStreamRef.current
+                );
+            }
+
+            const cameraStream =
                 await navigator.mediaDevices.getUserMedia(
                     {
                         video: true,
@@ -168,13 +221,149 @@ export function useWebRTC({
                     }
                 );
 
-            localStreamRef.current =
-                stream;
+            cameraStreamRef.current =
+                cameraStream;
 
-            setLocalStream(stream);
+            return updateLocalStream(
+                cameraStream,
+                screenStreamRef.current
+            );
+        }, [updateLocalStream]);
 
-            return stream;
-        }, []);
+    const stopScreenShare =
+        useCallback(() => {
+            const cameraStream =
+                cameraStreamRef.current;
+
+            const screenStream =
+                screenStreamRef.current;
+
+            if (!cameraStream) {
+                return;
+            }
+
+            const cameraVideo =
+                cameraStream.getVideoTracks()[0];
+
+            if (!cameraVideo) {
+                return;
+            }
+
+            for (const peerConnection of
+                peerConnectionsRef.current.values()) {
+                const videoSender =
+                    peerConnection
+                        .getSenders()
+                        .find(
+                            (sender) =>
+                                sender.track?.kind ===
+                                "video"
+                        );
+
+                if (videoSender) {
+                    void videoSender.replaceTrack(
+                        cameraVideo
+                    );
+                }
+            }
+
+            screenStream
+                ?.getTracks()
+                .forEach((track) => {
+                    track.stop();
+                });
+
+            screenStreamRef.current = null;
+
+            updateLocalStream(
+                cameraStream,
+                null
+            );
+
+            setIsScreenSharing(false);
+
+            console.log(
+                "[WebRTC] Compartilhamento de tela encerrado."
+            );
+        }, [updateLocalStream]);
+
+    const startScreenShare =
+        useCallback(async () => {
+            try {
+                if (screenStreamRef.current) {
+                    return;
+                }
+
+                const cameraStream =
+                    await startLocalMedia();
+
+                const screenStream =
+                    await navigator.mediaDevices.getDisplayMedia(
+                        {
+                            video: true,
+                            audio: false
+                        }
+                    );
+
+                const screenVideo =
+                    screenStream.getVideoTracks()[0];
+
+                if (!screenVideo) {
+                    screenStream
+                        .getTracks()
+                        .forEach((track) =>
+                            track.stop()
+                        );
+
+                    return;
+                }
+
+                screenStreamRef.current =
+                    screenStream;
+
+                screenVideo.onended = () => {
+                    stopScreenShare();
+                };
+
+                for (const peerConnection of
+                    peerConnectionsRef.current.values()) {
+                    const videoSender =
+                        peerConnection
+                            .getSenders()
+                            .find(
+                                (sender) =>
+                                    sender.track?.kind ===
+                                    "video"
+                            );
+
+                    if (videoSender) {
+                        await videoSender.replaceTrack(
+                            screenVideo
+                        );
+                    }
+                }
+
+                updateLocalStream(
+                    cameraStream,
+                    screenStream
+                );
+
+                setIsScreenSharing(true);
+
+                console.log(
+                    "[WebRTC] Compartilhamento de tela iniciado."
+                );
+            } catch (error) {
+                console.error(
+                    "[WebRTC] Não foi possível compartilhar a tela:",
+                    error
+                );
+            }
+        }, [
+            startLocalMedia,
+            stopScreenShare,
+            updateLocalStream
+        ]);
 
     const createOffer =
         useCallback(
@@ -187,7 +376,8 @@ export function useWebRTC({
                         targetUserId
                     );
 
-                for (const track of stream.getTracks()) {
+                for (const track of
+                    stream.getTracks()) {
                     const alreadyAdded =
                         peerConnection
                             .getSenders()
@@ -241,7 +431,8 @@ export function useWebRTC({
                         data.user
                     );
 
-                for (const track of stream.getTracks()) {
+                for (const track of
+                    stream.getTracks()) {
                     const alreadyAdded =
                         peerConnection
                             .getSenders()
@@ -307,6 +498,7 @@ export function useWebRTC({
                         "[WebRTC] PeerConnection não encontrada:",
                         data.user
                     );
+
                     return;
                 }
 
@@ -336,6 +528,7 @@ export function useWebRTC({
                         "[WebRTC] PeerConnection não encontrada para ICE:",
                         data.user
                     );
+
                     return;
                 }
 
@@ -430,16 +623,27 @@ export function useWebRTC({
 
             websocket.disconnect();
 
-            for (const peerConnection of peerConnectionsRef.current.values()) {
+            for (const peerConnection of
+                peerConnectionsRef.current.values()) {
                 peerConnection.close();
             }
 
             peerConnectionsRef.current.clear();
 
-            for (const track of localStreamRef.current?.getTracks() ?? []) {
-                track.stop();
-            }
+            screenStreamRef.current
+                ?.getTracks()
+                .forEach((track) =>
+                    track.stop()
+                );
 
+            cameraStreamRef.current
+                ?.getTracks()
+                .forEach((track) =>
+                    track.stop()
+                );
+
+            screenStreamRef.current = null;
+            cameraStreamRef.current = null;
             localStreamRef.current = null;
 
             remoteStreamsRef.current.clear();
@@ -456,7 +660,10 @@ export function useWebRTC({
         connected,
         localStream,
         remoteStreams,
+        isScreenSharing,
         startLocalMedia,
+        startScreenShare,
+        stopScreenShare,
         createOffer
     };
 }

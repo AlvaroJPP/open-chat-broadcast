@@ -19,28 +19,30 @@ export function RoomLayout({
     messages
 }: RoomLayoutProps) {
     const currentUser =
-    participants.find((p) => p.isYou) ??
-    participants[0];
+        participants.find((p) => p.isYou) ??
+        participants[0];
 
-if (!currentUser) {
-    return (
-        <div className="flex h-screen items-center justify-center bg-background">
-            <p className="text-muted-foreground">
-                Nenhum participante encontrado.
-            </p>
-        </div>
-    );
-}
+    if (!currentUser) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-background">
+                <p className="text-muted-foreground">
+                    Nenhum participante encontrado.
+                </p>
+            </div>
+        );
+    }
 
-const presenter =
-    participants.find((p) => p.isSharingScreen) ??
-    currentUser;
+    const presenter =
+        participants.find((p) => p.isSharingScreen) ??
+        currentUser;
 
     const {
         connected,
         localStream,
         remoteStreams,
-        createOffer
+        isScreenSharing,
+        startScreenShare,
+        stopScreenShare
     } = useWebRTC({
         userId: currentUser.id,
         roomId: room.id
@@ -66,9 +68,12 @@ const presenter =
                 <StreamView
                     presenter={presenter}
                     isLive={room.isLive}
+                    onShareScreen={startScreenShare}
+                    onStopShareScreen={stopScreenShare}
+                    isScreenSharing={isScreenSharing}
                 >
                     <div className="relative flex h-full min-h-0 flex-col gap-4">
-                        <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl bg-black">
+                        <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black">
                             {Array.from(
                                 remoteStreams.entries()
                             ).map(
@@ -77,28 +82,48 @@ const presenter =
                                         key={userId}
                                         ref={(element) => {
                                             if (element) {
-                                                element.srcObject =
-                                                    stream;
+                                                element.srcObject = stream;
                                             }
                                         }}
                                         autoPlay
                                         playsInline
-                                        className="h-full w-full object-contain"
+                                        className="absolute inset-0 h-full w-full object-contain"
                                     />
                                 )
                             )}
 
-                            {remoteStreams.size === 0 && (
-                                <CodeEditorPreview />
-                            )}
+                            {remoteStreams.size === 0 &&
+                                isScreenSharing &&
+                                localStream && (
+                                    <video
+                                        ref={(element) => {
+                                            if (element) {
+                                                element.srcObject =
+                                                    localStream;
+                                            }
+                                        }}
+                                        autoPlay
+                                        muted
+                                        playsInline
+                                        className="absolute inset-0 h-full w-full object-contain"
+                                    />
+                                )}
+
+                            {remoteStreams.size === 0 &&
+                                !isScreenSharing && (
+                                    <div className="flex h-full items-center justify-center">
+                                        <p className="text-sm text-muted-foreground">
+                                            Aguardando transmissão...
+                                        </p>
+                                    </div>
+                                )}
                         </div>
 
-                        {localStream && (
+                        {localStream && !isScreenSharing && (
                             <video
                                 ref={(element) => {
                                     if (element) {
-                                        element.srcObject =
-                                            localStream;
+                                        element.srcObject = localStream;
                                     }
                                 }}
                                 autoPlay

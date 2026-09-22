@@ -2,32 +2,69 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { RoomLayout } from "@/components/broadcast/RoomLayout";
-import { mockMessages } from "@/lib/mock-data";
 import { getCurrentUserId } from "@/lib/current-user";
-import type { Participant, RoomInfo } from "@/lib/types";
+import type {
+  ChatMessageData,
+  Participant,
+  RoomInfo,
+} from "@/lib/types";
 
 type ApiParticipant = {
-  user: string | {
-    _id: string;
-    username?: string;
-    nickname?: string;
-    avatar?: string | null;
-    status?: string;
-  };
+  user:
+    | string
+    | {
+        _id: string;
+        username?: string;
+        nickname?: string;
+        avatar?: string | null;
+        status?: string;
+      };
   joinedAt: string;
 };
 
 type ApiRoom = {
   _id: string;
   name: string;
-  owner: string | {
-    _id: string;
-    username?: string;
-    nickname?: string;
-    avatar?: string | null;
-  };
+
+  owner:
+    | string
+    | {
+        _id: string;
+        username?: string;
+        nickname?: string;
+        avatar?: string | null;
+      };
+
   participants: ApiParticipant[];
+
   status: "waiting" | "active" | "closed";
+};
+
+type ApiMessage = {
+  _id: string;
+
+  user:
+    | string
+    | {
+        _id: string;
+        username?: string;
+        nickname?: string;
+        avatar?: string | null;
+      };
+
+  content: string;
+
+  type:
+    | "text"
+    | "image"
+    | "video"
+    | "audio"
+    | "document"
+    | "system";
+
+  createdAt: string;
+
+  room?: string;
 };
 
 type ApiResponse<T> = {
@@ -46,10 +83,20 @@ export const Route = createFileRoute("/rooms/$id")({
 function RoomPage() {
   const { id } = Route.useParams();
 
-  const [room, setRoom] = useState<RoomInfo | null>(null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [room, setRoom] =
+    useState<RoomInfo | null>(null);
+
+  const [participants, setParticipants] =
+    useState<Participant[]>([]);
+
+  const [messages, setMessages] =
+    useState<ChatMessageData[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,7 +106,8 @@ function RoomPage() {
         setLoading(true);
         setError(null);
 
-        const currentUserId = getCurrentUserId();
+        const currentUserId =
+          getCurrentUserId();
 
         if (!currentUserId) {
           throw new Error(
@@ -67,84 +115,230 @@ function RoomPage() {
           );
         }
 
-        const response = await fetch(
-          `/api/rooms/${id}`
-        );
+        /*
+         * ==========================
+         * CARREGAR SALA
+         * ==========================
+         */
 
-        if (!response.ok) {
+        const roomResponse =
+          await fetch(`/api/rooms/${id}`);
+
+        if (!roomResponse.ok) {
           throw new Error(
-            `Não foi possível carregar a sala. HTTP ${response.status}`
+            `Não foi possível carregar a sala. HTTP ${roomResponse.status}`
           );
         }
 
-        const responseData =
-          (await response.json()) as ApiResponse<ApiRoom>;
+        const roomResponseData =
+          (await roomResponse.json()) as ApiResponse<ApiRoom>;
 
-        if (!responseData.success || !responseData.data) {
+        if (
+          !roomResponseData.success ||
+          !roomResponseData.data
+        ) {
           throw new Error(
-            responseData.error?.message ??
-            "Resposta inválida da API."
+            roomResponseData.error?.message ??
+              "Resposta inválida da API."
           );
         }
 
-        const data = responseData.data;
+        const data =
+          roomResponseData.data;
 
         if (cancelled) {
           return;
         }
+
+        /*
+         * ==========================
+         * DONO DA SALA
+         * ==========================
+         */
 
         const ownerId =
           typeof data.owner === "string"
             ? data.owner
             : data.owner._id;
 
+        /*
+         * ==========================
+         * DADOS DA SALA
+         * ==========================
+         */
+
         const roomInfo: RoomInfo = {
           id: data._id,
           name: data.name,
-          isLive: data.status === "active",
+          isLive:
+            data.status === "active",
           inviteUrl:
             `${window.location.origin}/rooms/${data._id}`,
         };
 
-        const roomParticipants: Participant[] =
-          data.participants.map((participant) => {
-            const user =
-              typeof participant.user === "string"
-                ? null
-                : participant.user;
+        /*
+         * ==========================
+         * PARTICIPANTES
+         * ==========================
+         */
 
-            const userId =
-              typeof participant.user === "string"
-                ? participant.user
-                : participant.user._id;
+        const roomParticipants:
+          Participant[] =
+          data.participants.map(
+            (participant) => {
+              const user =
+                typeof participant.user ===
+                "string"
+                  ? null
+                  : participant.user;
 
-            return {
-              id: userId,
+              const userId =
+                typeof participant.user ===
+                "string"
+                  ? participant.user
+                  : participant.user._id;
 
-              name:
-                user?.nickname ??
-                user?.username ??
-                `Usuário ${userId.slice(-4)}`,
+              return {
+                id: userId,
 
-              isYou:
-                userId === currentUserId,
+                name:
+                  user?.nickname ??
+                  user?.username ??
+                  `Usuário ${userId.slice(-4)}`,
 
-              status:
-                userId === ownerId
-                  ? "transmitindo"
-                  : "assistindo",
+                isYou:
+                  userId === currentUserId,
 
-              avatarColor: "bg-primary",
+                status:
+                  user?.status === "offline"
+                    ? "ausente"
+                    : "assistindo",
 
-              micMuted: false,
+                avatarColor:
+                  "bg-primary",
 
-              isSharingScreen:
-                userId === ownerId,
-            };
-          });
+                micMuted: false,
+
+                /*
+                 * Não vamos mais fingir que
+                 * o dono está transmitindo.
+                 *
+                 * O estado real de compartilhamento
+                 * será controlado pelo WebRTC.
+                 */
+                isSharingScreen:
+                  false,
+              };
+            }
+          );
+
+        /*
+         * ==========================
+         * CARREGAR MENSAGENS
+         * ==========================
+         */
+
+        const messagesResponse =
+          await fetch(
+            `/api/rooms/${id}/messages`
+          );
+
+        if (!messagesResponse.ok) {
+          throw new Error(
+            `Não foi possível carregar as mensagens. HTTP ${messagesResponse.status}`
+          );
+        }
+
+        const messagesResponseData =
+          (await messagesResponse.json()) as ApiResponse<
+            ApiMessage[]
+          >;
+
+        if (
+          !messagesResponseData.success
+        ) {
+          throw new Error(
+            messagesResponseData.error?.message ??
+              "Não foi possível carregar as mensagens."
+          );
+        }
+
+        const apiMessages =
+          messagesResponseData.data ?? [];
+
+        /*
+         * ==========================
+         * CONVERTER MENSAGENS
+         * API → FRONTEND
+         * ==========================
+         */
+
+        const roomMessages:
+          ChatMessageData[] =
+          apiMessages.map(
+            (message) => {
+              const messageUser =
+                typeof message.user ===
+                "string"
+                  ? null
+                  : message.user;
+
+              const userId =
+                typeof message.user ===
+                "string"
+                  ? message.user
+                  : message.user._id;
+
+              const participant =
+                roomParticipants.find(
+                  (item) =>
+                    item.id === userId
+                );
+
+              const authorName =
+                messageUser?.nickname ??
+                messageUser?.username ??
+                participant?.name ??
+                `Usuário ${userId.slice(-4)}`;
+
+              const avatarColor =
+                participant?.avatarColor ??
+                "bg-primary";
+
+              return {
+                id: message._id,
+
+                author: {
+                  id: userId,
+                  name: authorName,
+                  avatarColor,
+                },
+
+                time: new Date(
+                  message.createdAt
+                ).toLocaleTimeString(
+                  "pt-BR",
+                  {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }
+                ),
+
+                text:
+                  message.content,
+              };
+            }
+          );
+
+        if (cancelled) {
+          return;
+        }
 
         setRoom(roomInfo);
-        setParticipants(roomParticipants);
+        setParticipants(
+          roomParticipants
+        );
+        setMessages(roomMessages);
       } catch (err) {
         if (cancelled) {
           return;
@@ -174,6 +368,12 @@ function RoomPage() {
     };
   }, [id]);
 
+  /*
+   * ==========================
+   * LOADING
+   * ==========================
+   */
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -184,6 +384,12 @@ function RoomPage() {
     );
   }
 
+  /*
+   * ==========================
+   * ERRO
+   * ==========================
+   */
+
   if (error || !room) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -193,18 +399,25 @@ function RoomPage() {
           </h1>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            {error ?? "Sala não encontrada."}
+            {error ??
+              "Sala não encontrada."}
           </p>
         </div>
       </div>
     );
   }
 
+  /*
+   * ==========================
+   * SALA
+   * ==========================
+   */
+
   return (
     <RoomLayout
       room={room}
       participants={participants}
-      messages={mockMessages}
+      messages={messages}
     />
   );
 }

@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
-import { Maximize2, MonitorUp } from "lucide-react";
+import {
+    Maximize2,
+    MonitorUp
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import type { Participant } from "@/lib/types";
@@ -8,22 +11,41 @@ interface StreamViewProps {
     presenter: Participant;
     isLive: boolean;
     onExpand?: () => void;
+    onShareScreen?: () => void;
+    onStopShareScreen?: () => void;
+    isScreenSharing?: boolean;
     children: ReactNode;
 }
 
-export function StreamView({ presenter, isLive, onExpand, children }: StreamViewProps) {
+export function StreamView({
+    presenter,
+    isLive,
+    onExpand,
+    onShareScreen,
+    onStopShareScreen,
+    isScreenSharing = false,
+    children
+}: StreamViewProps) {
     return (
         <section className="flex min-w-0 flex-1 flex-col rounded-2xl border border-border bg-card">
             <div className="flex items-center gap-3 border-b border-border px-5 py-3.5">
                 {isLive && (
-                    <Badge variant="live" className="gap-1.5 pl-2">
+                    <Badge
+                        variant="live"
+                        className="gap-1.5 pl-2"
+                    >
                         <span className="size-1.5 rounded-full bg-destructive-foreground" />
                         AO VIVO
                     </Badge>
                 )}
+
                 <span className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">{presenter.name}</span> está transmitindo sua tela
+                    <span className="font-medium text-foreground">
+                        {presenter.name}
+                    </span>{" "}
+                    está transmitindo sua tela
                 </span>
+
                 <button
                     type="button"
                     onClick={onExpand}
@@ -34,13 +56,35 @@ export function StreamView({ presenter, isLive, onExpand, children }: StreamView
                 </button>
             </div>
 
-            <div className="min-h-0 flex-1 p-4">{children}</div>
+            <div className="min-h-0 flex-1 p-4">
+                {children}
+            </div>
 
-            <div className="border-t border-border px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
                 <span className="inline-flex items-center gap-2 rounded-lg bg-secondary/60 px-3 py-2 text-sm text-foreground">
                     <MonitorUp className="size-4 text-muted-foreground" />
+
                     Tela de {presenter.name}
                 </span>
+
+                {isScreenSharing ? (
+                    <button
+                        type="button"
+                        onClick={onStopShareScreen}
+                        className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
+                    >
+                        Parar transmissão
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={onShareScreen}
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                    >
+                        <MonitorUp className="size-4" />
+                        Transmitir tela
+                    </button>
+                )}
             </div>
         </section>
     );

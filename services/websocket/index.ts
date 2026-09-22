@@ -1,6 +1,7 @@
 import { Server as HttpServer } from "http";
 
 import userModel from "../models/user_model.ts";
+
 import {
     WebSocketServer,
     WebSocket
@@ -9,8 +10,7 @@ import {
 import {
     ConnectedClient,
     joinRoom,
-    leaveRoom,
-    removeParticipant
+    leaveRoom
 } from "./room.js";
 
 import {
@@ -109,6 +109,7 @@ async function handleMessage(
                 );
 
                 break;
+
             case "broadcast:start":
                 await startBroadcast(
                     client,
@@ -117,6 +118,7 @@ async function handleMessage(
                 );
 
                 break;
+
             case "broadcast:end":
                 await endBroadcast(
                     client,
@@ -125,6 +127,7 @@ async function handleMessage(
                 );
 
                 break;
+
             case "screen:start":
                 await startScreen(
                     client,
@@ -142,6 +145,7 @@ async function handleMessage(
                 );
 
                 break;
+
             case "webrtc:offer":
                 await sendOffer(
                     client,
@@ -168,7 +172,6 @@ async function handleMessage(
                 );
 
                 break;
-
 
             default:
                 send(
@@ -247,8 +250,22 @@ function start(
             socket.on(
                 "close",
                 async () => {
-                    const userId = client.userId;
-                    const roomId = client.roomId;
+                    const userId =
+                        client.userId;
+
+                    const roomId =
+                        client.roomId;
+
+                    /*
+                     * A desconexão do WebSocket
+                     * NÃO remove o usuário da sala.
+                     *
+                     * room.participants representa
+                     * a associação persistente à sala.
+                     *
+                     * clients representa apenas
+                     * a presença/conexão atual.
+                     */
 
                     if (userId) {
                         await userModel.findByIdAndUpdate(
@@ -259,19 +276,17 @@ function start(
                         );
                     }
 
-                    if (userId && roomId) {
-                        await removeParticipant(
-                            userId,
-                            roomId
-                        );
-                    }
-
                     clients.delete(client);
 
+                    /*
+                     * Avisa os usuários que estavam
+                     * conectados à mesma sala.
+                     */
                     if (userId && roomId) {
                         for (const connectedClient of clients) {
                             if (
-                                connectedClient.roomId !== roomId
+                                connectedClient.roomId !==
+                                roomId
                             ) {
                                 continue;
                             }
@@ -287,7 +302,7 @@ function start(
                         }
 
                         console.log(
-                            `[WEBSOCKET] Usuário ${userId} removido da sala ${roomId} por desconexão.`
+                            `[WEBSOCKET] Usuário ${userId} desconectado da sala ${roomId}.`
                         );
                     }
 
