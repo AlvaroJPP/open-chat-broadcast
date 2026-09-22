@@ -25,18 +25,18 @@ export default defineConfig({
 
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: `http://127.0.0.1:${process.env['PORT'] || 3000}`,
         changeOrigin: true,
       },
 
       "/ws": {
-        target: "ws://localhost:3000",
+        target: `ws://127.0.0.1:${process.env['PORT'] || 3000}`,
         ws: true,
         changeOrigin: true,
       },
 
       "/media": {
-        target: "http://127.0.0.1:3001",
+        target: `http://127.0.0.1:${process.env['PORT'] || 3000}`,
         changeOrigin: true,
       },
     },

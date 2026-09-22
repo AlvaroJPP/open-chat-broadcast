@@ -2,17 +2,17 @@ import "dotenv/config";
 import express from "express";
 import websocket from "../services/websocket/index.ts";
 
-import config from "../services/config/config.ts";
-import dir from "../services/config/dir.ts";
-import http from "../services/config/http.js";
-import mongodb from "../services/config/mongodb.ts";
+import config from "../config/config.ts";
+import dir from "../config/dir.ts";
+import http from "../config/http.js";
+import mongodb from "../config/mongodb.ts";
 import { createServer } from "node:http";
 
-import userRouter from "../services/routers/user_router.ts";
-import broadcastRouter from "../services/routers/broadcast_router.ts";
-import roomRouter from "../services/routers/room_router.ts";
-import messageRouter from "../services/routers/message_router.ts";
-import mediaRouter from "../services/routers/media_router.ts";
+import userRouter from "../routers/user_router.ts";
+import broadcastRouter from "../routers/broadcast_router.ts";
+import roomRouter from "../routers/room_router.ts";
+import messageRouter from "../routers/message_router.ts";
+import mediaRouter from "../routers/media_router.ts";
 
 const app = express();
 

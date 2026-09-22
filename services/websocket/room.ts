@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
-import userModel from "../models/user_model.ts";
-import roomModel from "../models/room_model.ts";
+import userModel from "../../models/user_model.ts";
+import roomModel from "../../models/room_model.ts";
 
 export type ConnectedClient = {
     socket: WebSocket;

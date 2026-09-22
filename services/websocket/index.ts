@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 
-import userModel from "../models/user_model.ts";
+import userModel from "../../models/user_model.ts";
 
 import {
     WebSocketServer,

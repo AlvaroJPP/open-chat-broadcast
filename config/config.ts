@@ -1,7 +1,7 @@
 import dns from "node:dns";
 const PORT = Number(process.env.PORT) || 3000;
 
-const HOST = process.env.HOST || "0.0.0.0";
+const HOST = process.env.HOST || "127.0.0.1";
 
 const MONGODB_URI =
     process.env.MONGODB_URI ||

@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 
-import messageModel from "../models/message_model.js";
-import roomModel from "../models/room_model.js";
+import messageModel from "../../models/message_model.js";
+import roomModel from "../../models/room_model.js";
 
 import type { ConnectedClient } from "./room.js";
 
