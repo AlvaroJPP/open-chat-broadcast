@@ -1,7 +1,32 @@
-import broadcastController from "../controllers/broadcast_controller.ts";
+import { Router } from "express";
 
-const broadcastRouter = {
-    controller: broadcastController
-};
+import broadcastController from "../controllers/broadcast_controller.js";
+
+const broadcastRouter = Router();
+
+broadcastRouter.post(
+    "/",
+    broadcastController.create
+);
+
+broadcastRouter.get(
+    "/",
+    broadcastController.findAll
+);
+
+broadcastRouter.get(
+    "/:id",
+    broadcastController.findById
+);
+
+broadcastRouter.patch(
+    "/:id",
+    broadcastController.update
+);
+
+broadcastRouter.delete(
+    "/:id",
+    broadcastController.delete
+);
 
 export default broadcastRouter;

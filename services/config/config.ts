@@ -1,3 +1,4 @@
+import dns from "node:dns";
 const PORT = Number(process.env.PORT) || 3000;
 
 const HOST = process.env.HOST || "0.0.0.0";
@@ -28,8 +29,24 @@ const config = {
     },
 
     directory: {
-        enabled: true
+        enabled: false
+    },
+
+    dns: {
+        servers: [
+            "1.1.1.1",
+            "8.8.8.8"
+        ],
+
+        configure() {
+            dns.setServers(this.servers);
+
+            console.log(
+                `[DNS] DNS configurado: ${this.servers.join(", ")}`
+            );
+        }
     }
+    
 
 };
 
