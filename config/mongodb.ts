@@ -11,12 +11,20 @@ async function connect(): Promise<void> {
 
     try {
         await mongoose.connect(
-            config.mongodb.uri
+            config.mongodb.uri,
+            {
+                dbName: "open-chat-broadcast"
+            }
         );
 
         console.log(
             "[MONGODB] Conectado ao MongoDB."
         );
+
+        console.log(
+            `[MONGODB] Database: ${mongoose.connection.name}`
+        );
+
     } catch (error) {
         console.error(
             "[MONGODB] Erro ao conectar:",
