@@ -11,7 +11,6 @@ import { Loader2 } from "lucide-react";
 
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { VisualConfigProvider } from "../kiosk/VisualContext";
-import { customer_logo } from "../kiosk/VisualElements";
 
 function NotFoundComponent() {
   return (
@@ -106,7 +105,6 @@ function NavigationTransition() {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95">
       <div className="relative h-32 w-full">
-        <customer_logo />
       </div>
       <Loader2 className="mt-4 size-10 animate-spin text-primary" />
     </div>
