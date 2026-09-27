@@ -1,219 +1,104 @@
 import { Request, Response } from "express";
-import userModel from "../models/user_model.ts";
+import {
+    createUser,
+    findAllUsers,
+    findUserById,
+    updateUser,
+    deleteUser,
+    AppError,
+} from "../services/user_service.ts";
+
 const TAG = "[USER]";
 
-const userController = {
-    model: userModel,
+/** Extrai status + mensagem de um erro (AppError ou não) para a resposta HTTP. */
+function respondWithError(res: Response, error: unknown, fallbackMessage: string) {
+    const status = error instanceof AppError ? error.status : 500;
+    const message = error instanceof AppError ? error.message : fallbackMessage;
 
+    return res.status(status).json({
+        success: false,
+        error: { status, message },
+    });
+}
+
+const userController = {
     async create(req: Request, res: Response) {
         console.log(TAG, "Criando usuário...");
         try {
-            const {
-                email,
-                nickname,
-                avatar
-            } = req.body;
+            const { email, nickname, avatar, pwd } = req.body;
 
-            if (!email || !nickname) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        status: 400,
-                        message: "Email e nickname são obrigatórios."
-                    }
-                });
-            }
-
-            const existingUser =
-                await userModel.findOne({
-                    email: email.toLowerCase()
-                });
-
-            if (existingUser) {
-                return res.status(409).json({
-                    success: false,
-                    error: {
-                        status: 409,
-                        message: "Email já está em uso."
-                    }
-                });
-            }
-
-            const user = await userModel.create({
-                email,
-                nickname,
-                avatar
-            });
+            const user = await createUser({ email, nickname, avatar, pwd });
 
             return res.status(201).json({
                 success: true,
-                data: user
+                data: user,
             });
         } catch (error) {
-            console.error(
-                TAG, "Erro ao criar usuário:",
-                error
-            );
-
-            return res.status(500).json({
-                success: false,
-                error: {
-                    status: 500,
-                    message: "Erro ao criar usuário."
-                }
-            });
+            console.error(TAG, "Erro ao criar usuário:", error);
+            return respondWithError(res, error, "Erro ao criar usuário.");
         }
     },
 
-    async findAll(req: Request, res: Response) {
+    async findAll(_req: Request, res: Response) {
         try {
-            const users = await userModel.find();
+            const users = await findAllUsers();
 
             return res.status(200).json({
                 success: true,
-                data: users
+                data: users,
             });
         } catch (error) {
-            console.error(
-                TAG, "Erro ao buscar usuários:",
-                error
-            );
-
-            return res.status(500).json({
-                success: false,
-                error: {
-                    status: 500,
-                    message: "Erro ao buscar usuários."
-                }
-            });
+            console.error(TAG, "Erro ao buscar usuários:", error);
+            return respondWithError(res, error, "Erro ao buscar usuários.");
         }
     },
 
     async findById(req: Request, res: Response) {
         try {
-            const user =
-                await userModel.findById(
-                    req.params.id
-                );
-
-            if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    error: {
-                        status: 404,
-                        message: "Usuário não encontrado."
-                    }
-                });
-            }
+            if (Array.isArray(req.params.id)) req.params.id = req.params.id[0];
+            const user = await findUserById(req.params.id);
 
             return res.status(200).json({
                 success: true,
-                data: user
+                data: user,
             });
         } catch (error) {
-            console.error(
-                "[USER] Erro ao buscar usuário:",
-                error
-            );
-
-            return res.status(500).json({
-                success: false,
-                error: {
-                    status: 500,
-                    message: "Erro ao buscar usuário."
-                }
-            });
+            console.error(TAG, "Erro ao buscar usuário:", error);
+            return respondWithError(res, error, "Erro ao buscar usuário.");
         }
     },
 
     async update(req: Request, res: Response) {
         try {
-            const {
-                nickname,
-                avatar,
-                status
-            } = req.body;
+            const { nickname, avatar, status } = req.body;
 
-            const user =
-                await userModel.findByIdAndUpdate(
-                    req.params.id,
-                    {
-                        nickname,
-                        avatar,
-                        status
-                    },
-                    {
-                        new: true,
-                        runValidators: true
-                    }
-                );
-
-            if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    error: {
-                        status: 404,
-                        message: "Usuário não encontrado."
-                    }
-                });
-            }
+            if (Array.isArray(req.params.id)) req.params.id = req.params.id[0];
+            const user = await updateUser(req.params.id, { nickname, avatar, status });
 
             return res.status(200).json({
                 success: true,
-                data: user
+                data: user,
             });
         } catch (error) {
-            console.error(
-                "[USER] Erro ao atualizar usuário:",
-                error
-            );
-
-            return res.status(500).json({
-                success: false,
-                error: {
-                    status: 500,
-                    message: "Erro ao atualizar usuário."
-                }
-            });
+            console.error(TAG, "Erro ao atualizar usuário:", error);
+            return respondWithError(res, error, "Erro ao atualizar usuário.");
         }
     },
 
     async delete(req: Request, res: Response) {
         try {
-            const user =
-                await userModel.findByIdAndDelete(
-                    req.params.id
-                );
-
-            if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    error: {
-                        status: 404,
-                        message: "Usuário não encontrado."
-                    }
-                });
-            }
+            if (Array.isArray(req.params.id)) req.params.id = req.params.id[0];
+            await deleteUser(req.params.id);
 
             return res.status(200).json({
                 success: true,
-                data: null
+                data: null,
             });
         } catch (error) {
-            console.error(
-                "[USER] Erro ao excluir usuário:",
-                error
-            );
-
-            return res.status(500).json({
-                success: false,
-                error: {
-                    status: 500,
-                    message: "Erro ao excluir usuário."
-                }
-            });
+            console.error(TAG, "Erro ao excluir usuário:", error);
+            return respondWithError(res, error, "Erro ao excluir usuário.");
         }
-    }
+    },
 };
 
 export default userController;

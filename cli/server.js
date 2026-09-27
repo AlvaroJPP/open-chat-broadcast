@@ -32,23 +32,21 @@ app.use(express.urlencoded({ extended: true }));
  *
  * Por isso mantemos uma lista de origens permitidas (via env) em vez de "*".
  */
-const allowedOrigins = (config.http.allowedOrigins ?? [
-    "http://localhost:5173",
-]);
+const allowedOrigins = config.http.allowedOrigins ?? ["http://localhost:5173"];
 
 app.use(
-    cors({
-        origin(origin, callback) {
-            // Requisições sem origin (ex: curl, apps mobile, health checks)
-            if (!origin || allowedOrigins.includes(origin)) {
-                callback(null, true);
-                return;
-            }
+  cors({
+    origin(origin, callback) {
+      // Requisições sem origin (ex: curl, apps mobile, health checks)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
 
-            callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
-        },
-        credentials: true, // permite cookies/credenciais nas respostas
-    })
+      callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
+    },
+    credentials: true, // permite cookies/credenciais nas respostas
+  }),
 );
 
 // Criar servidor HTTP com Express e WebSocket
@@ -58,73 +56,61 @@ const server = createServer(app);
 websocket.start(server);
 
 async function startServer() {
-    config.dns.configure();
+  config.dns.configure();
 
-    await mongodb.connect();
+  await mongodb.connect();
 
-    if (config.directory.enabled) {
-        dir.start();
-    }
+  if (config.directory.enabled) {
+    dir.start();
+  }
 
-    // ============================================================
-    // MIDDLEWARES DE SEGURANÇA (antes das rotas)
-    // ============================================================
+  // ============================================================
+  // MIDDLEWARES DE SEGURANÇA (antes das rotas)
+  // ============================================================
 
-    // Filtro de IP — precisa vir ANTES das rotas, senão nunca bloqueia nada
-    app.use(http.ipFilter);
+  // Filtro de IP — precisa vir ANTES das rotas, senão nunca bloqueia nada
+  app.use(http.ipFilter);
 
-    // ============================================================
-    // ROTAS DA API
-    // ============================================================
+  // ============================================================
+  // ROTAS DA API
+  // ============================================================
 
-    // Usuários
-    app.use(
-        "/api/users",
-        userRouter
-    );
+  // Usuários
+  app.use("/api/users", userRouter);
 
-    // Broadcasts
-    app.use("/api/broadcasts", broadcastRouter);
+  // Broadcasts
+  app.use("/api/broadcasts", broadcastRouter);
 
-    // Salas
-    app.use("/api/rooms", roomRouter);
+  // Salas
+  app.use("/api/rooms", roomRouter);
 
-    // Mensagens
-    app.use("/api", messageRouter);
+  // Mensagens
+  app.use("/api", messageRouter);
 
-    // Mídias
-    app.use("/api/media", mediaRouter);
+  // Mídias
+  app.use("/api/media", mediaRouter);
 
-    // ============================================================
-    // MIDDLEWARES FINAIS
-    // ============================================================
+  // ============================================================
+  // MIDDLEWARES FINAIS
+  // ============================================================
 
-    // Rota não encontrada
-    app.use(http.notFoundHandler);
+  // Rota não encontrada
+  app.use(http.notFoundHandler);
 
-    // Tratamento de erros (sempre por último)
-    app.use(http.errorHandler);
+  // Tratamento de erros (sempre por último)
+  app.use(http.errorHandler);
 
-    // ============================================================
-    // SERVIDOR
-    // ============================================================
+  // ============================================================
+  // SERVIDOR
+  // ============================================================
 
-    server.listen(
-        config.http.port,
-        config.http.host,
-        () => {
-            console.log(
-                `[SERVER] Servidor iniciado em ${config.http.host}:${config.http.port}`
-            );
-        }
-    );
+  server.listen(config.http.port, config.http.host, () => {
+    console.log(`[SERVER] Servidor iniciado em ${config.http.host}:${config.http.port}`);
+  });
 }
 
 startServer().catch((error) => {
-    console.error(
-        "[SERVER] Falha ao iniciar o servidor:",
-        error
-    );
+  console.error("[SERVER] Falha ao iniciar o servidor:", error);
 
-    process.exit(1);
+  process.exit(1);
 });

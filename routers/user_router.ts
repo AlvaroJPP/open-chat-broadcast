@@ -1,7 +1,7 @@
 import userController from "../controllers/user_controller.ts";
+import authController from "../controllers/auth_controller.ts";
 
 import { Router } from "express";
-
 
 const userRouter = Router();
 
@@ -28,6 +28,16 @@ userRouter.patch(
 userRouter.delete(
     "/:id",
     userController.delete
+);
+
+userRouter.post(
+    "/login",
+    authController.login
+);
+
+userRouter.post(
+    "/logout",
+    authController.logout
 );
 
 export default userRouter;

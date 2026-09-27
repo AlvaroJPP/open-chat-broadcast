@@ -1,6 +1,10 @@
 {
-  "printWidth": 100,
-  "semi": true,
+  "semi": false,
   "singleQuote": false,
+  // desligar tudo,
+  "bracketSpacing": false,
+  "arrowParens": "avoid",
+  "endOfLine": "auto",
+  "printWidth": 100,
   "trailingComma": "all"
 }

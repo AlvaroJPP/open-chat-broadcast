@@ -19,7 +19,7 @@ const config = {
         host: HOST,
 
         access: {
-            allowAll: false,
+            allowAll: true,
             allowedIPs: ALLOWED_IPS
         }
     },

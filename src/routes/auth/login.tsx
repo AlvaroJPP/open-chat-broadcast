@@ -34,11 +34,11 @@ function RouteComponent() {
     setIsSubmitting(true)
     try {
       // TODO: integrar com o endpoint real de autenticação (ex: /api/auth/login)
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // cookies httpOnly para o token, evita expor em localStorage
-        body: JSON.stringify({ nickname, password }),
+        body: JSON.stringify({ nickname, pwd: password }),
       })
 
       if (!response.ok) {
@@ -127,7 +127,7 @@ function RouteComponent() {
                   onChange={(e) => setPassword(e.target.value)}
                   aria-invalid={!!error}
                   aria-describedby={error ? 'login-error' : undefined}
-                  placeholder="••••••••"
+                  placeholder="Sua Senha"
                   className="w-full rounded-md border border-input bg-input/30 px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
                 />
                 <button

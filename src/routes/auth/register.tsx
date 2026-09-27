@@ -15,6 +15,7 @@ function RouteComponent() {
   const navigate = useNavigate()
 
   const [email, setEmail] = useState('')
+  const [pwd, setPwd] = useState('')
   const [nickname, setNickname] = useState('')
   const [avatar, setAvatar] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -31,11 +32,11 @@ function RouteComponent() {
 
     setIsSubmitting(true)
     try {
-      const response = await fetch('http://localhost:3001/api/users/', {
+      const response = await fetch('/api/users/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, nickname, avatar: avatar || undefined }),
+        body: JSON.stringify({ email, nickname, avatar: avatar || undefined, pwd }),
       })
 
       if (!response.ok) {
@@ -125,6 +126,22 @@ function RouteComponent() {
                 value={avatar}
                 onChange={(e) => setAvatar(e.target.value)}
                 placeholder="https://exemplo.com/avatar.png"
+                className="w-full rounded-md border border-input bg-input/30 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+              />
+            </div>
+
+            {/* Campo de Senha (pwd) */}
+            <div className="space-y-1.5">
+              <label htmlFor="pwd" className="text-sm font-medium text-foreground">
+                Senha <span className="text-muted-foreground">(obrigatório)</span>
+              </label>
+              <input
+                id="pwd"
+                name="pwd"
+                type="password"
+                value={pwd}
+                onChange={(e) => setPwd(e.target.value)}
+                placeholder="Digite Sua Senha"
                 className="w-full rounded-md border border-input bg-input/30 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
               />
             </div>
