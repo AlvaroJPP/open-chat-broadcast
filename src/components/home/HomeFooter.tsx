@@ -1,8 +1,8 @@
 import { Github } from "lucide-react";
 
 const contributors = [
-    { username: "AlvaroJPP", url: "https://github.com/AlvaroJPP" },
-    { username: "ysh-rael", url: "https://github.com/ysh-rael" },
+    { email: "AlvaroJPP", url: "https://github.com/AlvaroJPP" },
+    { email: "ysh-rael", url: "https://github.com/ysh-rael" },
 ];
 
 const APP_VERSION = "v0.1.0";
@@ -14,12 +14,12 @@ export function HomeFooter() {
             <div className="flex items-center gap-2">
                 {contributors.map((contributor) => (
                     <a
-                        key={contributor.username}
+                        key={contributor.email}
                         href={contributor.url}
                         target="_blank"
                         rel="noreferrer"
-                        aria-label={`GitHub de ${contributor.username}`}
-                        title={contributor.username}
+                        aria-label={`GitHub de ${contributor.email}`}
+                        title={contributor.email}
                         className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     >
                         <Github className="size-4" />

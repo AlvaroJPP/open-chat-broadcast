@@ -62,7 +62,7 @@ export function HomeLayout() {
 
     return (
         <div className="flex h-screen flex-col bg-background">
-            <HomeHeader onLogin={() => navigate({ to: "/auth/login" })} onSignUp={() => navigate({ to: "/auth/signup" })} />
+            <HomeHeader onLogin={() => navigate({ to: "/auth/login" })} onSignUp={() => navigate({ to: "/auth/register" })} />
 
             <main className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6 lg:flex-row lg:items-start">
                 <div className="flex min-w-0 flex-1 flex-col gap-8">

@@ -9,24 +9,24 @@ const userController = {
         console.log(TAG, "Criando usuário...");
         try {
             const {
-                username,
+                email,
                 nickname,
                 avatar
             } = req.body;
 
-            if (!username || !nickname) {
+            if (!email || !nickname) {
                 return res.status(400).json({
                     success: false,
                     error: {
                         status: 400,
-                        message: "Username e nickname são obrigatórios."
+                        message: "Email e nickname são obrigatórios."
                     }
                 });
             }
 
             const existingUser =
                 await userModel.findOne({
-                    username: username.toLowerCase()
+                    email: email.toLowerCase()
                 });
 
             if (existingUser) {
@@ -34,13 +34,13 @@ const userController = {
                     success: false,
                     error: {
                         status: 409,
-                        message: "Username já está em uso."
+                        message: "Email já está em uso."
                     }
                 });
             }
 
             const user = await userModel.create({
-                username,
+                email,
                 nickname,
                 avatar
             });

@@ -88,7 +88,7 @@ function RouteComponent() {
                 id="nickname"
                 name="nickname"
                 type="text"
-                autoComplete="username"
+                autoComplete="email"
                 required
                 autoFocus
                 value={nickname}

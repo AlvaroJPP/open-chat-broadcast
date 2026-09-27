@@ -2,7 +2,7 @@ import type { Room, RoomIconType, RecentRoomView, User } from "./db-types";
 
 export const mockCurrentUser: User = {
     _id: "u1",
-    username: "yshdev",
+    email: "yshdev",
     nickname: "Yshdev",
     avatar: null,
     status: "online",

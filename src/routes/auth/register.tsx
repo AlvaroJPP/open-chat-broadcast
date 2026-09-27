@@ -8,13 +8,13 @@ export const Route = createFileRoute('/auth/register')({
 
 /**
  * Tela de cadastro.
- * Backend (POST /api/users) espera: { username, nickname, avatar }
+ * Backend (POST /api/users) espera: { email, nickname, avatar }
  * OBS: o endpoint atual não recebe senha — sinalizamos isso abaixo.
  */
 function RouteComponent() {
   const navigate = useNavigate()
 
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [nickname, setNickname] = useState('')
   const [avatar, setAvatar] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -24,8 +24,8 @@ function RouteComponent() {
     event.preventDefault()
     setError(null)
 
-    if (!username.trim() || !nickname.trim()) {
-      setError('Nome de usuário e apelido são obrigatórios.')
+    if (!email.trim() || !nickname.trim()) {
+      setError('Email e apelido são obrigatórios.')
       return
     }
 
@@ -35,7 +35,7 @@ function RouteComponent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username, nickname, avatar: avatar || undefined }),
+        body: JSON.stringify({ email, nickname, avatar: avatar || undefined }),
       })
 
       if (!response.ok) {
@@ -73,21 +73,21 @@ function RouteComponent() {
 
         <div className="rounded-[var(--radius)] border border-border bg-card p-6 shadow-sm sm:p-8">
           <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-            {/* Nome de usuário */}
+            {/* Email */}
             <div className="space-y-1.5">
-              <label htmlFor="username" className="text-sm font-medium text-foreground">
-                Nome de usuário
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
+                Email
               </label>
               <input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="name"
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
                 required
                 autoFocus
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="João da Silva"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="joao@example.com"
                 className="w-full rounded-md border border-input bg-input/30 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
               />
             </div>
@@ -101,7 +101,7 @@ function RouteComponent() {
                 id="nickname"
                 name="nickname"
                 type="text"
-                autoComplete="username"
+                autoComplete="email"
                 required
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}

@@ -14,7 +14,7 @@ type ApiParticipant = {
     | string
     | {
         _id: string;
-        username?: string;
+        email?: string;
         nickname?: string;
         avatar?: string | null;
         status?: string;
@@ -30,7 +30,7 @@ type ApiRoom = {
     | string
     | {
         _id: string;
-        username?: string;
+        email?: string;
         nickname?: string;
         avatar?: string | null;
       };
@@ -47,7 +47,7 @@ type ApiMessage = {
     | string
     | {
         _id: string;
-        username?: string;
+        email?: string;
         nickname?: string;
         avatar?: string | null;
       };
@@ -203,7 +203,7 @@ function RoomPage() {
 
                 name:
                   user?.nickname ??
-                  user?.username ??
+                  user?.email ??
                   `Usuário ${userId.slice(-4)}`,
 
                 isYou:
@@ -297,7 +297,7 @@ function RoomPage() {
 
               const authorName =
                 messageUser?.nickname ??
-                messageUser?.username ??
+                messageUser?.email ??
                 participant?.name ??
                 `Usuário ${userId.slice(-4)}`;
 

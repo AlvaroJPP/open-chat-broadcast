@@ -2,15 +2,15 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
     {
-        username: {
+        email: {
             type: String,
-            required: true, // Username é obrigatório
-            unique: true, // Não permite dois usuários com o mesmo username
+            required: true, // Email é obrigatório
+            unique: true, // Não permite dois usuários com o mesmo email
             trim: true, // Remove espaços no início e no final
-            lowercase: true, // Salva o username sempre em letras minúsculas
-            minlength: 3, // Mínimo de 3 caracteres
-            maxlength: 30, // Máximo de 30 caracteres
-            match: /^[a-zA-Z0-9_]+$/ // Permite apenas letras, números e _
+            lowercase: true, // Salva o email sempre em letras minúsculas
+            minlength: 4, // Mínimo de 4 caracteres
+            maxlength: 60, // Máximo de 30 caracteres
+            match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ // Valida o formato do email
         },
 
         nickname: {

@@ -5,7 +5,7 @@ export type UserStatus = "online" | "offline" | "away" | "busy";
 
 export interface User {
     _id: string;
-    username: string;
+    email: string;
     nickname: string;
     avatar: string | null;
     status: UserStatus;
