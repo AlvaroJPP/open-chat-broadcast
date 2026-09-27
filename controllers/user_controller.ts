@@ -1,10 +1,12 @@
 import { Request, Response } from "express";
 import userModel from "../models/user_model.ts";
+const TAG = "[USER]";
 
 const userController = {
     model: userModel,
 
     async create(req: Request, res: Response) {
+        console.log(TAG, "Criando usuário...");
         try {
             const {
                 username,
@@ -49,7 +51,7 @@ const userController = {
             });
         } catch (error) {
             console.error(
-                "[USER] Erro ao criar usuário:",
+                TAG, "Erro ao criar usuário:",
                 error
             );
 
@@ -73,7 +75,7 @@ const userController = {
             });
         } catch (error) {
             console.error(
-                "[USER] Erro ao buscar usuários:",
+                TAG, "Erro ao buscar usuários:",
                 error
             );
 

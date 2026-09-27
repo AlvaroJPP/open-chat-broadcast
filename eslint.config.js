@@ -5,6 +5,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
+// desativa validacao de crlf e lf
 export default tseslint.config(
   {
     ignores: ["dist", "services", "controllers", "cmd", "eslint.config.json", ".output", ".vinxi"],
@@ -21,10 +22,12 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
     },
     rules: {
+      "prettier/prettier": ["error", { endOfLine: "auto" }], // usa lf auto
       ...reactHooks.configs.recommended.rules,
       "no-restricted-imports": [
         "error",
         {
+          indent: ["error", 4],
           paths: [
             {
               name: "server-only",

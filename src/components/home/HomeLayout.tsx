@@ -8,10 +8,10 @@ import { JoinRoomCard } from "./JoinRoomCard";
 import { RecentRoomsPanel } from "./RecentRoomsPanel";
 import { WelcomeHero } from "./WelcomeHero";
 import { createRoom, getRecentRooms, joinRoom } from "@/services/rooms-service";
-import type { RecentRoomView } from "@/libs/db-types";
+import type { RecentRoomView } from "@/lib/db-types";
 
 export function HomeLayout() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
     const [recentRooms, setRecentRooms] = useState<RecentRoomView[]>([]);
     const [loadingRooms, setLoadingRooms] = useState(true);
@@ -62,7 +62,7 @@ export function HomeLayout() {
 
     return (
         <div className="flex h-screen flex-col bg-background">
-            <HomeHeader />
+            <HomeHeader onLogin={() => navigate({ to: "/auth/login" })} onSignUp={() => navigate({ to: "/auth/signup" })} />
 
             <main className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6 lg:flex-row lg:items-start">
                 <div className="flex min-w-0 flex-1 flex-col gap-8">
