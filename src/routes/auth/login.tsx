@@ -36,22 +36,36 @@ function RouteComponent() {
       // TODO: integrar com o endpoint real de autenticação (ex: /api/auth/login)
       const response = await fetch('/api/users/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // cookies httpOnly para o token, evita expor em localStorage
-        body: JSON.stringify({ nickname, pwd: password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          nickname: nickname.trim(),
+          pwd: password,
+        }),
       })
 
-      if (!response.ok) {
-        throw new Error('Apelido ou senha inválidos.')
+    const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result?.error?.message || 'Apelido ou senha inválidos.'
+        )
       }
 
-      navigate({ to: '/' })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+      // Guarda o usuário autenticado para a tela /rooms
+      if (result.data) {
+        localStorage.setItem('currentUser', JSON.stringify(result.data))
+      }
+
+      navigate({ to: '/rooms' })
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.')
+          } finally {
+            setIsSubmitting(false)
+          }
+        }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
