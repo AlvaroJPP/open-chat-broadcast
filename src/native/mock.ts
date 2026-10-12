@@ -28,7 +28,12 @@ export const webMockApi: NativeApi = {
         coreVersion: "mock-web",
         kiosk: false,
         uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
-        devices: { printer: "online", camera: "online", cardReader: "online" },
+        devices: {
+          printer: "online",
+          camera: "online",
+          cardReader: "online",
+          braServer: "online",
+        },
       };
     },
     async exitKiosk() {

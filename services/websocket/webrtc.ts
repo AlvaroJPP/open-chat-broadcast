@@ -4,7 +4,6 @@ import roomModel from "../../models/room_model.ts";
 
 import type { ConnectedClient } from "./room.ts";
 
-
 type WebRTCData = {
     user: string;
     room: string;
@@ -14,9 +13,12 @@ type WebRTCData = {
 };
 
 type RoomParticipant = {
-    user: {
-        toString(): string;
-    };
+    user:
+        | string
+        | {
+              _id?: string;
+              toString(): string;
+          };
 
     joinedAt: Date;
 };
@@ -123,6 +125,11 @@ async function validate(
         return false;
     }
 
+    /*
+     * Confirma que o socket que enviou
+     * a sinalização pertence ao usuário
+     * informado e está conectado à sala.
+     */
     if (
         client.userId !== data.user ||
         client.roomId !== data.room
@@ -139,6 +146,9 @@ async function validate(
         return false;
     }
 
+    /*
+     * Busca a sala.
+     */
     const room =
         await roomModel.findById(
             data.room
@@ -170,14 +180,44 @@ async function validate(
         return false;
     }
 
+    /*
+     * Verifica o usuário alvo.
+     *
+     * NÃO usamos populate aqui.
+     * O roomModel retorna o ObjectId original
+     * do participante.
+     */
     const participant =
         room.participants.some(
-            (participant: RoomParticipant) =>
-                participant.user.toString() ===
-                data.target
+            (
+                participant: RoomParticipant
+            ) => {
+                const participantUserId =
+                    typeof participant.user ===
+                    "string"
+                        ? participant.user
+                        : participant.user
+                              ._id
+                            ? participant.user._id.toString()
+                            : participant.user.toString();
+
+                return (
+                    participantUserId ===
+                    data.target
+                );
+            }
         );
 
     if (!participant) {
+        console.error(
+            "[WEBRTC] Usuário alvo não participa da sala:",
+            {
+                target: data.target,
+                room: data.room,
+                sender: data.user
+            }
+        );
+
         send(
             client.socket,
             "webrtc:error",
@@ -200,6 +240,20 @@ function sendToTarget(
     event: string,
     payload: unknown
 ): void {
+    /*
+     * Um mesmo usuário pode possuir
+     * várias conexões WebSocket:
+     *
+     * - página da sala
+     * - chat
+     * - WebRTC
+     *
+     * Por isso enviamos a sinalização
+     * para TODAS as conexões do usuário alvo.
+     */
+
+    let delivered = false;
+
     for (const connectedClient of clients) {
         if (
             connectedClient.userId !==
@@ -221,6 +275,10 @@ function sendToTarget(
             payload
         );
 
+        delivered = true;
+    }
+
+    if (delivered) {
         return;
     }
 

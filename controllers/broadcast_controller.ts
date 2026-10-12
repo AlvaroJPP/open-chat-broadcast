@@ -90,10 +90,20 @@ const broadcastController = {
     // Buscar broadcast pelo ID
     async findById(req: Request, res: Response) {
         try {
+            const id = req.params["id"];
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID do broadcast é obrigatório."
+                    }
+                });
+            }
+
             const broadcast =
-                await broadcastModel.findById(
-                    req.params.id
-                );
+                await broadcastModel.findById(id);
 
             if (!broadcast) {
                 return res.status(404).json({
@@ -128,6 +138,18 @@ const broadcastController = {
     // Atualizar broadcast
     async update(req: Request, res: Response) {
         try {
+            const id = req.params["id"];
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID do broadcast é obrigatório."
+                    }
+                });
+            }
+
             const {
                 title,
                 description,
@@ -140,7 +162,7 @@ const broadcastController = {
 
             const broadcast =
                 await broadcastModel.findByIdAndUpdate(
-                    req.params.id,
+                    id,
                     {
                         title,
                         description,
@@ -189,10 +211,20 @@ const broadcastController = {
     // Excluir broadcast
     async delete(req: Request, res: Response) {
         try {
+            const id = req.params["id"];
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID do broadcast é obrigatório."
+                    }
+                });
+            }
+
             const broadcast =
-                await broadcastModel.findByIdAndDelete(
-                    req.params.id
-                );
+                await broadcastModel.findByIdAndDelete(id);
 
             if (!broadcast) {
                 return res.status(404).json({

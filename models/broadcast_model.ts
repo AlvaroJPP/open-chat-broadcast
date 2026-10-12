@@ -68,7 +68,7 @@ const broadcastSchema = new mongoose.Schema(
 );
 
 const broadcastModel =
-    mongoose.models.Broadcast ||
-    mongoose.model("Broadcast", broadcastSchema);
+    ((mongoose.models["Broadcast"] as mongoose.Model<any> | undefined) ??
+    mongoose.model<any>("Broadcast", broadcastSchema)) as any;
 
 export default broadcastModel;

@@ -1,43 +1,88 @@
-import { useState } from "react";
-import { Users, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { X } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ParticipantItem } from "./ParticipantItem";
 import type { Participant } from "@/lib/types";
 
 interface ParticipantsPanelProps {
     participants: Participant[];
+    /** IDs de quem está transmitindo a tela agora. */
+    liveIds?: string[];
+    /** Mostra o botão de fechar (menu lateral no celular). */
+    onClose?: () => void;
+    /** Conteúdo extra no fim da lista (ex.: link da sala). */
+    children?: ReactNode;
 }
 
-export function ParticipantsPanel({ participants }: ParticipantsPanelProps) {
-    const [open, setOpen] = useState(true);
+export function ParticipantsPanel({
+    participants,
+    liveIds = [],
+    onClose,
+    children,
+}: ParticipantsPanelProps) {
+    const isLive = (p: Participant) =>
+        liveIds.includes(p.id) || !!p.isSharingScreen || p.status === "transmitindo";
 
-    if (!open) return null;
+    const broadcasting = participants.filter(isLive);
+    const watching = participants.filter((p) => !isLive(p));
 
     return (
-        <section className="flex flex-col rounded-2xl border border-border bg-card">
-            <div className="flex items-center gap-2 border-b border-border px-4 py-3.5">
-                <Users className="size-4 text-muted-foreground" />
-                <h2 className="text-sm font-semibold text-foreground">Participantes</h2>
-                <Badge className="px-1.5 py-0 text-[10px]">{participants.length}</Badge>
-                <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label="Fechar painel de participantes"
-                >
-                    <X className="size-4" />
-                </button>
+        <section className="flex min-h-0 flex-1 flex-col">
+            <div className="flex items-start justify-between border-b border-border py-4 pl-4 pr-2">
+                <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                        Participantes
+                    </p>
+                    <h2 className="mt-0.5 text-xl font-bold">
+                        Na sala · <span className="text-red-400">{participants.length}</span>
+                    </h2>
+                </div>
+
+                {onClose && (
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Fechar lista de participantes"
+                        className="flex size-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                    >
+                        <X className="size-5" />
+                    </button>
+                )}
             </div>
 
-            <ScrollArea className="max-h-72">
-                <div className="flex flex-col gap-0.5 p-2">
-                    {participants.map((participant) => (
-                        <ParticipantItem key={participant.id} participant={participant} />
-                    ))}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="px-4 pb-4 pt-3.5">
+                    {broadcasting.length > 0 && (
+                        <>
+                            <p className="mb-1 flex justify-between text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                                <span>Transmitindo</span>
+                                <span>{broadcasting.length}</span>
+                            </p>
+                            {broadcasting.map((participant) => (
+                                <ParticipantItem key={participant.id} participant={participant} live />
+                            ))}
+                        </>
+                    )}
+
+                    {watching.length > 0 && (
+                        <>
+                            <p
+                                className={`mb-1 flex justify-between text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground ${
+                                    broadcasting.length > 0 ? "mt-6" : ""
+                                }`}
+                            >
+                                <span>Assistindo</span>
+                                <span>{watching.length}</span>
+                            </p>
+                            {watching.map((participant) => (
+                                <ParticipantItem key={participant.id} participant={participant} />
+                            ))}
+                        </>
+                    )}
+
+                    {children}
                 </div>
-            </ScrollArea>
+            </div>
         </section>
     );
 }

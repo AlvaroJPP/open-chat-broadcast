@@ -30,7 +30,13 @@ export function RecentRoomsPanel({ rooms, loading, onSelectRoom }: RecentRoomsPa
                     )}
 
                     {!loading &&
-                        rooms.map((room) => <RecentRoomItem key={room.id} room={room} onSelect={onSelectRoom} />)}
+                        rooms.map((room) => (
+                            <RecentRoomItem
+                                key={room.id}
+                                room={room}
+                                onSelect={onSelectRoom ?? (() => undefined)}
+                            />
+                        ))}
                 </div>
             </ScrollArea>
         </section>

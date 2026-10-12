@@ -1,58 +1,124 @@
-import { Plus, DoorOpen } from 'lucide-react'
+import { useState } from 'react'
+import { MonitorPlay, Plus, Users } from 'lucide-react'
+
+export interface LiveRoom {
+  id: string
+  name: string
+  count: number
+}
 
 interface RoomsHeroProps {
   onCreateRoom: () => void
-  onJoinRoom: () => void
+  /** Entra usando um código ou link colado no campo. */
+  onJoinByCode: (code: string) => void
+  /** Sala ativa em destaque ("Ao vivo agora"), se existir. */
+  liveRoom?: LiveRoom | null
+  onJoinLive?: (id: string) => void
+  disabled?: boolean
 }
 
 export function RoomsHero({
   onCreateRoom,
-  onJoinRoom,
+  onJoinByCode,
+  liveRoom,
+  onJoinLive,
+  disabled,
 }: RoomsHeroProps) {
-  return (
-    <section className="relative overflow-hidden border-b border-border bg-card">
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute -right-20 top-10 h-64 w-64 rounded-full bg-primary/30 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-48 w-48 rounded-full bg-accent/20 blur-3xl" />
-      </div>
+  const [code, setCode] = useState('')
 
-      <div className="relative mx-auto max-w-7xl px-6 py-16 lg:px-10">
-        <div className="max-w-3xl">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-primary">
+  return (
+    <section className="border-b border-border">
+      <div
+        className={`mx-auto grid max-w-6xl gap-10 px-4 py-8 md:px-8 md:py-10 ${
+          liveRoom ? 'lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-12' : ''
+        }`}
+      >
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
             Open Chat Broadcast
           </p>
 
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            MAIS QUE UMA SALA,
+          <h1 className="mt-3 text-3xl font-extrabold leading-[1.05] tracking-tight md:text-5xl">
+            Mais que uma sala,
             <br />
-            UMA CONEXÃO.
+            uma conexão.
           </h1>
 
-          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
-            Crie uma sala, convide outras pessoas e
-            compartilhe sua transmissão em tempo real.
+          <p className="mt-4 max-w-md text-sm text-muted-foreground md:text-base">
+            Crie uma sala, convide outras pessoas e compartilhe sua
+            transmissão em tempo real.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={onCreateRoom}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"
-            >
-              <Plus className="size-4" />
-              Criar sala
-            </button>
+          <button
+            type="button"
+            onClick={onCreateRoom}
+            className="mt-6 flex h-12 w-full items-center justify-center gap-2 bg-primary px-6 text-sm font-bold text-primary-foreground hover:opacity-90 sm:w-auto"
+          >
+            <Plus className="size-5" />
+            Criar sala
+          </button>
 
+          <p className="mb-2 mt-6 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            Ou entre com um código
+          </p>
+
+          <form
+            className="flex max-w-md"
+            onSubmit={(event) => {
+              event.preventDefault()
+              onJoinByCode(code)
+            }}
+          >
+            <input
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              aria-label="Código da sala"
+              placeholder="Cole o código ou link da sala"
+              className="h-12 min-w-0 flex-1 border border-r-0 border-input bg-card px-3.5 text-sm outline-none focus:border-primary"
+            />
             <button
-              type="button"
-              onClick={onJoinRoom}
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-background px-5 py-3 text-sm font-semibold hover:bg-muted"
+              type="submit"
+              disabled={disabled}
+              className="h-12 border border-foreground px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"
             >
-              <DoorOpen className="size-4" />
-              Entrar em uma sala
+              Entrar
             </button>
-          </div>
+          </form>
         </div>
+
+        {liveRoom && (
+          <div className="border border-border bg-card">
+            <div className="relative flex aspect-video items-center justify-center bg-black text-muted-foreground">
+              <MonitorPlay className="size-9" />
+              <span className="absolute left-2.5 top-2.5 bg-destructive px-2 py-0.5 text-[11px] font-bold text-white">
+                AO VIVO
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 p-4">
+              <div className="min-w-0 flex-1">
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  Ao vivo agora
+                </p>
+                <p className="truncate text-lg font-bold">{liveRoom.name}</p>
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="size-3.5" />
+                  {liveRoom.count}{' '}
+                  {liveRoom.count === 1 ? 'pessoa' : 'pessoas'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onJoinLive?.(liveRoom.id)}
+                className="h-11 bg-primary px-5 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                Entrar na sala
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )

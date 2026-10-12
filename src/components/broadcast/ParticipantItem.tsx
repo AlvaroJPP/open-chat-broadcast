@@ -1,7 +1,6 @@
-import { MicOff, MonitorUp, MoreVertical } from "lucide-react";
+import { Crown, MicOff, MoreVertical } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,43 +17,57 @@ const statusLabel: Record<Participant["status"], string> = {
 
 interface ParticipantItemProps {
     participant: Participant;
+    /** Está transmitindo a tela agora. */
+    live?: boolean;
 }
 
-export function ParticipantItem({ participant }: ParticipantItemProps) {
+export function ParticipantItem({ participant, live = false }: ParticipantItemProps) {
     return (
-        <div className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-secondary/50">
-            <Avatar className="size-10">
-                <AvatarFallback className={participant.avatarColor}>
-                    {participant.name.slice(0, 1)}
-                </AvatarFallback>
-            </Avatar>
-
-            <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-foreground">{participant.name}</span>
-                    {participant.isYou && (
-                        <Badge variant="success" className="px-1.5 py-0 text-[10px]">
-                            Você
-                        </Badge>
-                    )}
-                </div>
-                <span className="text-xs text-muted-foreground">{statusLabel[participant.status]}</span>
+        <div className="flex h-[60px] items-center gap-3 border-b border-border">
+            <div className="relative shrink-0">
+                <Avatar className="size-10">
+                    <AvatarFallback className="bg-muted text-sm font-bold text-foreground">
+                        {participant.name.slice(0, 1).toLowerCase()}
+                    </AvatarFallback>
+                </Avatar>
+                <span
+                    className={`absolute -bottom-0.5 -right-0.5 size-2.5 border-2 border-background ${
+                        live ? "bg-primary" : "bg-muted-foreground"
+                    }`}
+                />
             </div>
 
-            <div className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
-                {participant.isSharingScreen && (
-                    <span className="flex size-7 items-center justify-center rounded-lg bg-success/15 text-success">
-                        <MonitorUp className="size-3.5" />
-                    </span>
-                )}
-                {participant.micMuted && (
-                    <span className="flex size-7 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
-                        <MicOff className="size-3.5" />
-                    </span>
-                )}
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-semibold">{participant.name}</span>
+                    {participant.isHost && (
+                        <Crown
+                            aria-label="Anfitrião"
+                            className="size-4 shrink-0 fill-[#f5b301] text-[#f5b301]"
+                        />
+                    )}
+                    {participant.isYou && (
+                        <span className="text-[11px] font-semibold text-primary">VOCÊ</span>
+                    )}
+                </div>
+
+                <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                    {participant.isHost && <span>Anfitrião</span>}
+                    {live ? (
+                        <span className="bg-destructive px-1.5 py-px text-[9px] font-bold tracking-wide text-white">
+                            AO VIVO
+                        </span>
+                    ) : (
+                        !participant.isHost && <span>{statusLabel[participant.status]}</span>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1 text-muted-foreground">
+                {participant.micMuted && <MicOff className="size-4" />}
                 <DropdownMenu>
                     <DropdownMenuTrigger
-                        className="flex size-7 items-center justify-center rounded-lg outline-none transition-colors hover:bg-secondary hover:text-foreground"
+                        className="flex size-8 items-center justify-center outline-none transition-colors hover:bg-secondary hover:text-foreground"
                         aria-label={`Mais opções de ${participant.name}`}
                     >
                         <MoreVertical className="size-4" />

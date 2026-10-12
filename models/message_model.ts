@@ -56,7 +56,7 @@ const messageSchema = new mongoose.Schema(
 );
 
 const messageModel =
-    mongoose.models.Message ||
-    mongoose.model("Message", messageSchema);
+    ((mongoose.models["Message"] as mongoose.Model<any> | undefined) ??
+    mongoose.model<any>("Message", messageSchema)) as any;
 
 export default messageModel;

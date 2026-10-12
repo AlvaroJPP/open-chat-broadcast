@@ -54,7 +54,7 @@ export function BraParkingLogo({ className = "" }: { className?: string }) {
   );
 }
 
-export function background_mediaBackground({ footer = false }: { footer?: boolean }) {
+export function BackgroundMediaBackground({ footer = false }: { footer?: boolean }) {
   const { config } = useVisualConfig();
   const { background_media } = config;
   if (!background_media.src) return null;
@@ -65,6 +65,8 @@ export function background_mediaBackground({ footer = false }: { footer?: boolea
     <img className={mediaClass} src={background_media.src} alt="Publicidade" />
   );
 }
+
+export const background_mediaBackground = BackgroundMediaBackground;
 
 export function ConfigurableChevron({ id }: { id: string }) {
   const { config } = useVisualConfig();

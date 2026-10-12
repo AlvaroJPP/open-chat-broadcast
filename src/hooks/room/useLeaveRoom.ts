@@ -1,0 +1,69 @@
+import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+
+interface UseLeaveRoomProps {
+    roomId: string;
+    userId: string;
+    stopAllMedia: () => void;
+}
+
+export function useLeaveRoom({
+    roomId,
+    userId,
+    stopAllMedia,
+}: UseLeaveRoomProps) {
+    const navigate = useNavigate();
+    const [isLeaving, setIsLeaving] = useState(false);
+
+    const handleLeave = async () => {
+        if (isLeaving) return;
+
+        setIsLeaving(true);
+
+        try {
+            stopAllMedia();
+
+            const response = await fetch(
+                `/api/rooms/${roomId}/leave`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        user: userId,
+                    }),
+                },
+            );
+
+            if (!response.ok && response.status !== 404) {
+                const result = await response
+                    .json()
+                    .catch(() => null);
+
+                throw new Error(
+                    result?.error?.message ??
+                        "Não foi possível sair da sala.",
+                );
+            }
+
+            await navigate({ to: "/rooms" });
+        } catch (error) {
+            console.error(
+                "[ROOM] Erro ao sair da sala:",
+                error,
+            );
+
+            // Mantém o comportamento anterior:
+            // não deixar o usuário preso na sala.
+            await navigate({ to: "/rooms" });
+        } finally {
+            setIsLeaving(false);
+        }
+    };
+
+    return {
+        handleLeave,
+        isLeaving,
+    };
+}

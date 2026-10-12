@@ -1,6 +1,6 @@
 import type { SystemStatus } from "@/native";
 import { Settings } from "lucide-react";
-import { background_mediaBackground } from "./VisualElements";
+import { BackgroundMediaBackground } from "./VisualElements";
 
 const stateColor: Record<string, string> = {
   online: "bg-success",
@@ -34,7 +34,7 @@ export function StatusBar({
         <Dot label="Internet" state={status?.devices.camera ?? "offline"} />
       </div>
 
-      <background_mediaBackground footer />
+      <BackgroundMediaBackground footer />
 
       <div className="flex items-center gap-6">
         <span>

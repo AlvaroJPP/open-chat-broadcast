@@ -84,7 +84,7 @@ export function CodeEditorPreview() {
                             {node.icon === "folder" && (
                                 <ChevronRight className={`size-3 shrink-0 text-muted-foreground ${node.open ? "rotate-90" : ""}`} />
                             )}
-                            <ExplorerIcon icon={node.icon} open={node.open} />
+                            <ExplorerIcon icon={node.icon ?? "file"} open={node.open ?? false} />
                             <span className="truncate">{node.name}</span>
                         </li>
                     ))}
@@ -107,11 +107,14 @@ export function CodeEditorPreview() {
                             <span className="whitespace-pre">
                                 {line.code.length === 0
                                     ? "\u00A0"
-                                    : line.code.map(([type, text], i) => (
-                                        <span key={i} className={tokenClass[type]}>
-                                            {text}
-                                        </span>
-                                    ))}
+                                    : line.code.map((token, i) => {
+                                        const [type, text] = token as [string, string];
+                                        return (
+                                            <span key={`${line.n}-${i}`} className={tokenClass[type] ?? "text-foreground/80"}>
+                                                {text}
+                                            </span>
+                                        );
+                                    })}
                             </span>
                         </div>
                     ))}

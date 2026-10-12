@@ -10,7 +10,7 @@ export interface KeyboardEventPayload {
     key?: string;
 }
 
-export interface KeyboardProps extends React.HTMLAttributes<HTMLDivElement> {
+export type KeyboardProps = Omit<React.HTMLAttributes<HTMLDivElement>, "onKeyPress" | "defaultValue" | "value" | "onChange"> & {
     /** Modo de exibição do teclado */
     mode?: KeyboardMode;
     /** Valor controlado do input */
@@ -37,7 +37,7 @@ export interface KeyboardProps extends React.HTMLAttributes<HTMLDivElement> {
     onConfirm?: (value: string) => void;
     /** Disparado ao limpar tudo */
     onClear?: () => void;
-}
+};
 
 const NUMERIC_ROWS: string[][] = [
     ["1", "2", "3"],

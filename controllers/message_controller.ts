@@ -18,7 +18,17 @@ const messageController = {
     // Buscar mensagens de uma sala
     async findByRoom(req: Request, res: Response) {
         try {
-            const { roomId } = req.params;
+            const roomId = req.params["roomId"];
+
+            if (!roomId) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da sala é obrigatório."
+                    }
+                });
+            }
 
             const room =
                 await roomModel.findById(roomId);
@@ -38,6 +48,7 @@ const messageController = {
                     .find({
                         room: roomId
                     })
+                    .populate("user")
                     .sort({
                         createdAt: 1
                     });
@@ -73,7 +84,17 @@ const messageController = {
                 replyTo
             } = req.body;
 
-            const { roomId } = req.params;
+            const roomId = req.params["roomId"];
+
+            if (!roomId) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da sala é obrigatório."
+                    }
+                });
+            }
 
             if (!user) {
                 return res.status(400).json({
@@ -136,7 +157,7 @@ const messageController = {
                 });
             }
 
-            const message =
+            const createdMessage =
                 await messageModel.create({
                     room: roomId,
                     user,
@@ -146,9 +167,14 @@ const messageController = {
                     replyTo: replyTo || null
                 });
 
+            const message =
+                await messageModel
+                    .findById(createdMessage._id)
+                    .populate("user");
+
             return res.status(201).json({
                 success: true,
-                data: message
+                data: message ?? createdMessage
             });
         } catch (error) {
             console.error(
@@ -169,7 +195,17 @@ const messageController = {
     // Excluir uma mensagem
     async delete(req: Request, res: Response) {
         try {
-            const { id } = req.params;
+            const id = req.params["id"];
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da mensagem é obrigatório."
+                    }
+                });
+            }
 
             const message =
                 await messageModel.findById(id);

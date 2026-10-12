@@ -1,116 +1,184 @@
+
 import "dotenv/config";
 import express from "express";
-import websocket from "../services/websocket/index.ts";
+import cors from "cors";
+import { createServer } from "node:http";
 
+import websocket from "../services/websocket/index.ts";
 import config from "../config/config.ts";
 import dir from "../config/dir.ts";
 import http from "../config/http.js";
 import mongodb from "../config/mongodb.ts";
-import { createServer } from "node:http";
+import roomCleanup from "../services/rooms/room_cleanup.ts";
 
 import userRouter from "../routers/user_router.ts";
 import broadcastRouter from "../routers/broadcast_router.ts";
 import roomRouter from "../routers/room_router.ts";
 import messageRouter from "../routers/message_router.ts";
 import mediaRouter from "../routers/media_router.ts";
-import cors from "cors";
 
 const app = express();
 
 app.use(express.json());
-// Lidar com Body Parser
 app.use(express.urlencoded({ extended: true }));
 
 // ============================================================
 // CORS
 // ============================================================
-/*
- * Quando `credentials: true` é usado no fetch do front (necessário para
- * enviar/receber cookies httpOnly, ex: token de sessão), o navegador exige
- * que o servidor responda com uma origem EXPLÍCITA em
- * `Access-Control-Allow-Origin` — o wildcard "*" é proibido nesse caso.
- *
- * Por isso mantemos uma lista de origens permitidas (via env) em vez de "*".
- */
-const allowedOrigins = config.http.allowedOrigins ?? ["http://localhost:5173"];
+
+const allowedOrigins = config.http.allowedOrigins ?? [];
+
+const lanOrigin =
+    /^https?:\/\/(localhost|127(?:\.\d{1,3}){3}|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/;
 
 app.use(
-  cors({
-    origin(origin, callback) {
-      // Requisições sem origin (ex: curl, apps mobile, health checks)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
+    cors({
+        origin(origin, callback) {
+            if (!origin) {
+                return callback(null, true);
+            }
 
-      callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
-    },
-    credentials: true, // permite cookies/credenciais nas respostas
-  }),
+            if (
+                allowedOrigins.includes(origin) ||
+                lanOrigin.test(origin)
+            ) {
+                return callback(null, true);
+            }
+
+            return callback(
+                new Error(`Origem não permitida pelo CORS: ${origin}`)
+            );
+        },
+        credentials: true
+    })
 );
 
-// Criar servidor HTTP com Express e WebSocket
+// ============================================================
+// SERVIDOR HTTP E WEBSOCKET
+// ============================================================
 
 const server = createServer(app);
 
 websocket.start(server);
 
+// ============================================================
+// INICIALIZAÇÃO
+// ============================================================
+
 async function startServer() {
-  config.dns.configure();
+    config.dns.configure();
 
-  await mongodb.connect();
+    await mongodb.connect();
 
-  if (config.directory.enabled) {
-    dir.start();
-  }
+    // Fecha salas que ficaram abertas de uma execução anterior.
+    await roomCleanup.onStartup();
 
-  // ============================================================
-  // MIDDLEWARES DE SEGURANÇA (antes das rotas)
-  // ============================================================
+    if (config.directory.enabled) {
+        dir.start();
+    }
 
-  // Filtro de IP — precisa vir ANTES das rotas, senão nunca bloqueia nada
-  app.use(http.ipFilter);
+    // ========================================================
+    // SEGURANÇA
+    // ========================================================
 
-  // ============================================================
-  // ROTAS DA API
-  // ============================================================
+    app.use(http.ipFilter);
 
-  // Usuários
-  app.use("/api/users", userRouter);
+    // ========================================================
+    // ROTAS
+    // ========================================================
 
-  // Broadcasts
-  app.use("/api/broadcasts", broadcastRouter);
+    app.use("/api/users", userRouter);
+    app.use("/api/broadcasts", broadcastRouter);
+    app.use("/api/rooms", roomRouter);
+    app.use("/api", messageRouter);
+    app.use("/api/media", mediaRouter);
 
-  // Salas
-  app.use("/api/rooms", roomRouter);
+    // ========================================================
+    // TRATAMENTO FINAL
+    // ========================================================
 
-  // Mensagens
-  app.use("/api", messageRouter);
+    app.use(http.notFoundHandler);
+    app.use(http.errorHandler);
 
-  // Mídias
-  app.use("/api/media", mediaRouter);
+    // ========================================================
+    // LISTEN
+    // ========================================================
 
-  // ============================================================
-  // MIDDLEWARES FINAIS
-  // ============================================================
-
-  // Rota não encontrada
-  app.use(http.notFoundHandler);
-
-  // Tratamento de erros (sempre por último)
-  app.use(http.errorHandler);
-
-  // ============================================================
-  // SERVIDOR
-  // ============================================================
-
-  server.listen(config.http.port, config.http.host, () => {
-    console.log(`[SERVER] Servidor iniciado em ${config.http.host}:${config.http.port}`);
-  });
+    server.listen(
+        config.http.port,
+        config.http.host,
+        () => {
+            console.log(
+                `[SERVER] Servidor iniciado em ${config.http.host}:${config.http.port}`
+            );
+        }
+    );
 }
 
-startServer().catch((error) => {
-  console.error("[SERVER] Falha ao iniciar o servidor:", error);
+// ============================================================
+// DESLIGAMENTO SEGURO
+// ============================================================
 
-  process.exit(1);
+let shuttingDown = false;
+
+async function shutdownServer(signal) {
+    if (shuttingDown) {
+        return;
+    }
+
+    shuttingDown = true;
+
+    console.log(
+        `[SERVER] Recebido ${signal}. Iniciando desligamento...`
+    );
+
+    // Para de aceitar novas conexões HTTP.
+    server.close();
+
+    try {
+        // Fecha todas as salas, se a opção estiver ativada.
+        await roomCleanup.onShutdown();
+
+        console.log("[SERVER] Limpeza das salas concluída.");
+    } catch (error) {
+        console.error(
+            "[SERVER] Erro ao limpar as salas:",
+            error
+        );
+    }
+
+    try {
+        // A conexão com o banco só é encerrada após a limpeza.
+        await mongodb.disconnect();
+    } catch (error) {
+        console.error(
+            "[SERVER] Erro ao desconectar do MongoDB:",
+            error
+        );
+    }
+
+    console.log("[SERVER] Servidor encerrado.");
+
+    process.exit(0);
+}
+
+process.on("SIGINT", () => {
+    void shutdownServer("SIGINT");
+});
+
+process.on("SIGTERM", () => {
+    void shutdownServer("SIGTERM");
+});
+
+// ============================================================
+// EXECUÇÃO
+// ============================================================
+
+startServer().catch((error) => {
+    console.error(
+        "[SERVER] Falha ao iniciar o servidor:",
+        error
+    );
+
+    process.exit(1);
 });

@@ -3,17 +3,13 @@ import {
   useNavigate,
 } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import {
-  Loader2,
-  RefreshCw,
-  Users,
-  X,
-} from 'lucide-react'
+import { X } from 'lucide-react'
 
 import { RoomsLayout } from '../../components/rooms/RoomsLayout'
-import { RoomsSidebar } from '../../components/rooms/RoomsSidebar'
+import { RoomsTopNav } from '../../components/rooms/RoomsTopNav'
 import { RoomsHero } from '../../components/rooms/RoomsHero'
-import { RoomActionCard } from '../../components/rooms/RoomActionCard'
+import { RoomsList } from '../../components/rooms/RoomsList'
+import { BroadcastWebSocket } from '../../lib/websocket'
 
 export const Route = createFileRoute('/rooms/')({
   component: RoomsPage,
@@ -64,6 +60,9 @@ function RoomsPage() {
 
   const [roomId, setRoomId] = useState('')
 
+  /**
+   * Carrega o usuário atual.
+   */
   useEffect(() => {
     const storedUser =
       localStorage.getItem('currentUser')
@@ -77,10 +76,14 @@ function RoomsPage() {
     }
 
     try {
-      const parsedUser = JSON.parse(storedUser)
+      const parsedUser =
+        JSON.parse(storedUser)
+
       setUser(parsedUser)
     } catch {
-      localStorage.removeItem('currentUser')
+      localStorage.removeItem(
+        'currentUser'
+      )
 
       navigate({
         to: '/auth/login',
@@ -88,25 +91,34 @@ function RoomsPage() {
     }
   }, [navigate])
 
+  /**
+   * Carrega as salas.
+   */
   async function loadRooms() {
     try {
-      setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/rooms', {
-        credentials: 'include',
-      })
+      const response =
+        await fetch('/api/rooms', {
+          credentials: 'include',
+        })
 
-      const result = await response.json()
+      const result =
+        await response.json()
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result?.error?.message ||
             'Não foi possível carregar as salas.'
         )
       }
 
-      setRooms(result.data || [])
+      setRooms(
+        result.data || []
+      )
     } catch (err) {
       setError(
         err instanceof Error
@@ -118,24 +130,115 @@ function RoomsPage() {
     }
   }
 
+  /**
+   * Primeira carga das salas.
+   */
   useEffect(() => {
-    if (user) {
-      loadRooms()
+    if (!user) {
+      return
+    }
+
+    void loadRooms()
+  }, [user])
+
+  /**
+   * WebSocket da página de salas.
+   *
+   * Recebe room:updated sempre que uma sala
+   * sofrer alteração.
+   */
+  useEffect(() => {
+    if (!user) {
+      return
+    }
+
+    const websocket =
+      new BroadcastWebSocket()
+
+    let unsubscribe:
+      | (() => void)
+      | null = null
+
+    let active = true
+
+    async function connect() {
+      try {
+        await websocket.connect()
+
+        if (!active) {
+          websocket.disconnect()
+          return
+        }
+
+        unsubscribe =
+          websocket.onMessage(
+            (message) => {
+              if (
+                message.event !==
+                'room:updated'
+              ) {
+                return
+              }
+
+              /**
+               * Não mostramos loading durante
+               * uma atualização automática.
+               */
+              void loadRooms()
+            }
+          )
+      } catch (error) {
+        console.error(
+          '[ROOMS] Falha ao conectar WebSocket:',
+          error
+        )
+      }
+    }
+
+    void connect()
+
+    return () => {
+      active = false
+
+      unsubscribe?.()
+
+      websocket.disconnect()
     }
   }, [user])
 
+  /**
+   * Atualização manual.
+   */
+  async function handleRefresh() {
+    try {
+      setLoading(true)
+
+      await loadRooms()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * Cria uma sala.
+   */
   async function handleCreateRoom() {
-    const userId = getUserId(user)
+    const userId =
+      getUserId(user)
 
     if (!userId) {
       setError(
         'Não foi possível identificar o usuário logado.'
       )
+
       return
     }
 
     if (!roomName.trim()) {
-      setError('Informe o nome da sala.')
+      setError(
+        'Informe o nome da sala.'
+      )
+
       return
     }
 
@@ -143,30 +246,46 @@ function RoomsPage() {
       setSubmitting(true)
       setError(null)
 
-      const response = await fetch('/api/rooms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: roomName.trim(),
-          owner: userId,
-          maxParticipants:
-            Number(maxParticipants) || 100,
-        }),
-      })
+      const response =
+        await fetch('/api/rooms', {
+          method: 'POST',
 
-      const result = await response.json()
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
 
-      if (!response.ok || !result.success) {
+          credentials: 'include',
+
+          body: JSON.stringify({
+            name:
+              roomName.trim(),
+
+            owner:
+              userId,
+
+            maxParticipants:
+              Number(
+                maxParticipants
+              ) || 100,
+          }),
+        })
+
+      const result =
+        await response.json()
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result?.error?.message ||
             'Não foi possível criar a sala.'
         )
       }
 
-      const room = result.data as Room
+      const room =
+        result.data as Room
 
       setShowCreate(false)
       setRoomName('')
@@ -176,6 +295,7 @@ function RoomsPage() {
 
       navigate({
         to: '/rooms/$id',
+
         params: {
           id: room._id,
         },
@@ -191,13 +311,20 @@ function RoomsPage() {
     }
   }
 
-  async function handleJoinRoom(id: string) {
-    const userId = getUserId(user)
+  /**
+   * Entra em uma sala.
+   */
+  async function handleJoinRoom(
+    id: string
+  ) {
+    const userId =
+      getUserId(user)
 
     if (!userId) {
       setError(
         'Não foi possível identificar o usuário logado.'
       )
+
       return
     }
 
@@ -205,23 +332,33 @@ function RoomsPage() {
       setSubmitting(true)
       setError(null)
 
-      const response = await fetch(
-        `/api/rooms/${id}/join`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            user: userId,
-          }),
-        }
-      )
+      const response =
+        await fetch(
+          `/api/rooms/${id}/join`,
+          {
+            method: 'POST',
 
-      const result = await response.json()
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
 
-      if (!response.ok || !result.success) {
+            credentials: 'include',
+
+            body: JSON.stringify({
+              user:
+                userId,
+            }),
+          }
+        )
+
+      const result =
+        await response.json()
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result?.error?.message ||
             'Não foi possível entrar na sala.'
@@ -230,6 +367,7 @@ function RoomsPage() {
 
       navigate({
         to: '/rooms/$id',
+
         params: {
           id,
         },
@@ -245,170 +383,113 @@ function RoomsPage() {
     }
   }
 
+  /**
+   * Logout.
+   */
   function handleLogout() {
-    localStorage.removeItem('currentUser')
+    localStorage.removeItem(
+      'currentUser'
+    )
 
     navigate({
       to: '/auth/login',
     })
   }
 
+  /**
+   * Abre modal de entrada por ID.
+   */
   function openJoinModal() {
     setError(null)
     setRoomId('')
     setShowJoin(true)
   }
 
+  /**
+   * Entra utilizando o ID digitado.
+   */
   async function handleJoinById() {
-    const id = roomId.trim()
+    const id =
+      roomId.trim()
 
     if (!id) {
-      setError('Informe o ID da sala.')
+      setError(
+        'Informe o ID da sala.'
+      )
+
       return
     }
 
     await handleJoinRoom(id)
   }
 
+  /**
+   * Entra usando um código ou link colado no campo do destaque.
+   */
+  async function handleJoinByCode(code: string) {
+    const id = code.trim().split('/').filter(Boolean).pop()
+
+    if (!id) {
+      setError('Informe o código ou o link da sala.')
+
+      return
+    }
+
+    await handleJoinRoom(id)
+  }
+
+  /**
+   * Sala ativa com mais gente, mostrada em "Ao vivo agora".
+   */
+  const liveRoom = rooms
+    .filter((room) => room.status === 'active')
+    .sort(
+      (a, b) =>
+        (b.participants?.length || 0) - (a.participants?.length || 0)
+    )[0]
+
   return (
     <RoomsLayout
-      sidebar={
-        <RoomsSidebar
-          user={user}
-          onLogout={handleLogout}
-        />
-      }
+      header={<RoomsTopNav user={user} onLogout={handleLogout} />}
     >
       <RoomsHero
         onCreateRoom={() => {
           setError(null)
           setShowCreate(true)
         }}
-        onJoinRoom={openJoinModal}
+        onJoinByCode={handleJoinByCode}
+        liveRoom={
+          liveRoom
+            ? {
+                id: liveRoom._id,
+                name: liveRoom.name,
+                count: liveRoom.participants?.length || 0,
+              }
+            : null
+        }
+        onJoinLive={handleJoinRoom}
+        disabled={submitting}
       />
 
-      <section className="mx-auto max-w-7xl px-6 py-10 lg:px-10">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">
-              Salas disponíveis
-            </h2>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              Entre em uma sala existente ou crie uma nova.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={loadRooms}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`size-4 ${
-                loading ? 'animate-spin' : ''
-              }`}
-            />
-            Atualizar
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+      {error && (
+        <div className="mx-auto max-w-6xl px-4 pt-6 md:px-8">
+          <div className="border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-red-400">
             {error}
           </div>
-        )}
+        </div>
+      )}
 
-        {loading ? (
-          <div className="flex min-h-40 items-center justify-center">
-            <Loader2 className="size-6 animate-spin text-primary" />
-          </div>
-        ) : rooms.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border p-10 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
-              <Users className="size-5 text-muted-foreground" />
-            </div>
-
-            <h3 className="mt-4 font-semibold">
-              Nenhuma sala disponível
-            </h3>
-
-            <p className="mt-2 text-sm text-muted-foreground">
-              Seja o primeiro a criar uma sala.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setShowCreate(true)}
-              className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              Criar sala
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {rooms.map((room) => (
-              <div
-                key={room._id}
-                className="rounded-xl border border-border bg-card p-5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="truncate font-semibold">
-                      {room.name}
-                    </h3>
-
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      ID: {room._id}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-1 text-xs ${
-                      room.status === 'active'
-                        ? 'bg-success/10 text-success'
-                        : room.status === 'closed'
-                          ? 'bg-destructive/10 text-destructive'
-                          : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {room.status === 'active'
-                      ? 'Ativa'
-                      : room.status === 'closed'
-                        ? 'Fechada'
-                        : 'Aguardando'}
-                  </span>
-                </div>
-
-                <div className="mt-5 flex items-center justify-between text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <Users className="size-4" />
-                    {room.participants?.length || 0}/
-                    {room.maxParticipants}
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={
-                    submitting ||
-                    room.status === 'closed'
-                  }
-                  onClick={() =>
-                    handleJoinRoom(room._id)
-                  }
-                  className="mt-5 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {room.status === 'closed'
-                    ? 'Sala fechada'
-                    : 'Entrar na sala'}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <RoomsList
+        rooms={rooms}
+        loading={loading}
+        submitting={submitting}
+        onRefresh={handleRefresh}
+        onJoin={handleJoinRoom}
+        onCreate={() => {
+          setError(null)
+          setShowCreate(true)
+        }}
+      />
 
       {/* Modal criar sala */}
       {showCreate && (
@@ -421,7 +502,11 @@ function RoomsPage() {
 
               <button
                 type="button"
-                onClick={() => setShowCreate(false)}
+                onClick={() =>
+                  setShowCreate(
+                    false
+                  )
+                }
                 className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
@@ -435,9 +520,13 @@ function RoomsPage() {
                 </label>
 
                 <input
-                  value={roomName}
+                  value={
+                    roomName
+                  }
                   onChange={(e) =>
-                    setRoomName(e.target.value)
+                    setRoomName(
+                      e.target.value
+                    )
                   }
                   placeholder="Minha sala"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
@@ -453,9 +542,13 @@ function RoomsPage() {
                   type="number"
                   min="1"
                   max="1000"
-                  value={maxParticipants}
+                  value={
+                    maxParticipants
+                  }
                   onChange={(e) =>
-                    setMaxParticipants(e.target.value)
+                    setMaxParticipants(
+                      e.target.value
+                    )
                   }
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
@@ -463,9 +556,13 @@ function RoomsPage() {
 
               <button
                 type="button"
-                onClick={handleCreateRoom}
-                disabled={submitting}
-                className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                onClick={
+                  handleCreateRoom
+                }
+                disabled={
+                  submitting
+                }
+                className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-50 disabled:opacity-50"
               >
                 {submitting
                   ? 'Criando...'
@@ -487,7 +584,11 @@ function RoomsPage() {
 
               <button
                 type="button"
-                onClick={() => setShowJoin(false)}
+                onClick={() =>
+                  setShowJoin(
+                    false
+                  )
+                }
                 className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
@@ -500,9 +601,13 @@ function RoomsPage() {
               </label>
 
               <input
-                value={roomId}
+                value={
+                  roomId
+                }
                 onChange={(e) =>
-                  setRoomId(e.target.value)
+                  setRoomId(
+                    e.target.value
+                  )
                 }
                 placeholder="ID da sala"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
@@ -510,8 +615,12 @@ function RoomsPage() {
 
               <button
                 type="button"
-                onClick={handleJoinById}
-                disabled={submitting}
+                onClick={
+                  handleJoinById
+                }
+                disabled={
+                  submitting
+                }
                 className="mt-4 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
                 {submitting

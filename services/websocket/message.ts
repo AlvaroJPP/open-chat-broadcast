@@ -116,7 +116,7 @@ export async function sendMessage(
         return;
     }
 
-    const message =
+    const createdMessage =
         await messageModel.create({
             room: data.room,
             user: data.user,
@@ -126,8 +126,13 @@ export async function sendMessage(
             replyTo: data.replyTo || null
         });
 
+    const message =
+        await messageModel
+            .findById(createdMessage._id)
+            .populate("user");
+
     const messageData =
-        message.toObject();
+        message?.toObject() ?? createdMessage.toObject();
 
     for (const connectedClient of clients) {
         if (

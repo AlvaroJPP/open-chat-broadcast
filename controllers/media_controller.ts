@@ -78,7 +78,17 @@ const mediaController = {
 
     async findById(req: Request, res: Response) {
         try {
-            const { id } = req.params;
+            const id = req.params["id"];
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da mídia é obrigatório."
+                    }
+                });
+            }
 
             const media =
                 await mediaModel.findById(id);
@@ -115,7 +125,17 @@ const mediaController = {
 
     async delete(req: Request, res: Response) {
         try {
-            const { id } = req.params;
+            const id = req.params["id"];
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da mídia é obrigatório."
+                    }
+                });
+            }
 
             const media =
                 await mediaModel.findById(id);

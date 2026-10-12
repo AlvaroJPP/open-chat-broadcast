@@ -103,10 +103,23 @@ const roomController = {
     // Buscar sala pelo ID
     async findById(req: Request, res: Response) {
         try {
+            const id = req.params["id"];
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da sala é obrigatório."
+                    }
+                });
+            }
+
             const room =
-                await roomModel.findById(
-                    req.params.id
-                );
+                await roomModel
+                    .findById(id)
+                    .populate("owner")
+                    .populate("participants.user");
 
             if (!room) {
                 return res.status(404).json({
@@ -144,6 +157,7 @@ const roomController = {
             const {
                 user
             } = req.body;
+            const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
 
             if (!user) {
                 return res.status(400).json({
@@ -155,10 +169,18 @@ const roomController = {
                 });
             }
 
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da sala é obrigatório."
+                    }
+                });
+            }
+
             const room =
-                await roomModel.findById(
-                    req.params.id
-                );
+                await roomModel.findById(id);
 
             if (!room) {
                 return res.status(404).json({
@@ -244,6 +266,7 @@ const roomController = {
             const {
                 user
             } = req.body;
+            const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
 
             if (!user) {
                 return res.status(400).json({
@@ -255,10 +278,18 @@ const roomController = {
                 });
             }
 
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da sala é obrigatório."
+                    }
+                });
+            }
+
             const room =
-                await roomModel.findById(
-                    req.params.id
-                );
+                await roomModel.findById(id);
 
             if (!room) {
                 return res.status(404).json({
@@ -348,6 +379,18 @@ const roomController = {
     // Atualizar sala
     async update(req: Request, res: Response) {
         try {
+            const id = req.params["id"];
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da sala é obrigatório."
+                    }
+                });
+            }
+
             const {
                 name,
                 broadcast,
@@ -357,7 +400,7 @@ const roomController = {
 
             const room =
                 await roomModel.findByIdAndUpdate(
-                    req.params.id,
+                    id,
                     {
                         name,
                         broadcast,
@@ -403,10 +446,20 @@ const roomController = {
     // Excluir sala
     async delete(req: Request, res: Response) {
         try {
+            const id = req.params["id"];
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        status: 400,
+                        message: "ID da sala é obrigatório."
+                    }
+                });
+            }
+
             const room =
-                await roomModel.findByIdAndDelete(
-                    req.params.id
-                );
+                await roomModel.findByIdAndDelete(id);
 
             if (!room) {
                 return res.status(404).json({

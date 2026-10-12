@@ -97,7 +97,7 @@ const mediaSchema = new mongoose.Schema(
 );
 
 const mediaModel =
-    mongoose.models.Media ||
-    mongoose.model("Media", mediaSchema);
+    ((mongoose.models["Media"] as mongoose.Model<any> | undefined) ??
+    mongoose.model<any>("Media", mediaSchema)) as any;
 
 export default mediaModel;

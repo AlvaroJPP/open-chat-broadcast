@@ -37,3 +37,6 @@ native/build
 
 services/server/data/media
 data
+
+# Certificados HTTPS locais (contêm chaves privadas)
+.cert/

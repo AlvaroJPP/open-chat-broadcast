@@ -1,0 +1,1146 @@
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState
+} from "react";
+
+import {
+    BroadcastWebSocket,
+    type WebSocketMessage
+} from "../lib/websocket";
+
+type UseWebRTCOptions = {
+    userId: string;
+    roomId: string;
+};
+
+type WebRTCSignal = {
+    user: string;
+    room: string;
+    target: string;
+    sdp?: RTCSessionDescriptionInit;
+    candidate?: RTCIceCandidateInit;
+};
+
+function getRtcConfiguration(): RTCConfiguration {
+    const iceServers: RTCIceServer[] = [
+        {
+            urls: [
+                "stun:stun.l.google.com:19302",
+                "stun:stun1.l.google.com:19302"
+            ]
+        }
+    ];
+
+    const parsedTurnServers =
+        (() => {
+            const rawServers =
+                import.meta.env["VITE_TURN_SERVERS"]?.trim();
+
+            if (!rawServers) {
+                return [] as string[];
+            }
+
+            try {
+                const parsed = JSON.parse(rawServers) as
+                    | string
+                    | string[];
+
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(Boolean);
+                }
+
+                if (typeof parsed === "string" && parsed.trim()) {
+                    return [parsed.trim()];
+                }
+            } catch (error) {
+                console.warn(
+                    "[WebRTC] VITE_TURN_SERVERS inválido; ignorando.",
+                    error
+                );
+            }
+
+            return [] as string[];
+        })();
+
+    const turnUrl =
+        import.meta.env["VITE_TURN_URL"]?.trim();
+    const turnUsername =
+        import.meta.env["VITE_TURN_USERNAME"]?.trim();
+    const turnCredential =
+        import.meta.env["VITE_TURN_CREDENTIAL"]?.trim();
+
+    const turnUrls = [
+        ...parsedTurnServers,
+        ...(turnUrl ? [turnUrl] : [])
+    ].filter(
+        (value, index, list) =>
+            value && list.indexOf(value) === index
+    );
+
+    for (const url of turnUrls) {
+        iceServers.push({
+            urls: url,
+            username: turnUsername || "",
+            credential: turnCredential || ""
+        });
+    }
+
+    const rtcConfig: RTCConfiguration & { sdpSemantics?: "unified-plan" | "plan-b" } = {
+        iceServers,
+        iceTransportPolicy: "all",
+        bundlePolicy: "max-bundle",
+        sdpSemantics: "unified-plan"
+    };
+
+    return rtcConfig;
+}
+
+export function useWebRTC({
+    userId,
+    roomId
+}: UseWebRTCOptions) {
+    const websocketRef =
+        useRef<BroadcastWebSocket | null>(null);
+
+    const peerConnectionsRef =
+        useRef<Map<string, RTCPeerConnection>>(
+            new Map()
+        );
+
+    const cameraStreamRef =
+        useRef<MediaStream | null>(null);
+
+    const microphoneStreamRef =
+        useRef<MediaStream | null>(null);
+
+    const screenStreamRef =
+        useRef<MediaStream | null>(null);
+
+    const screenAudioTrackRef =
+        useRef<MediaStreamTrack | null>(null);
+
+    const localStreamRef =
+        useRef<MediaStream | null>(null);
+
+    const remoteStreamsRef =
+        useRef<Map<string, MediaStream>>(
+            new Map()
+        );
+
+    const [localStream, setLocalStream] =
+        useState<MediaStream | null>(null);
+
+    const [remoteStreams, setRemoteStreams] =
+        useState<Map<string, MediaStream>>(
+            new Map()
+        );
+
+    const [connected, setConnected] =
+        useState(false);
+
+    const [isScreenSharing, setIsScreenSharing] =
+        useState(false);
+
+    const [sharingUsers, setSharingUsers] =
+        useState<string[]>([]);
+
+    const sharingUsersRef =
+        useRef<Set<string>>(new Set());
+
+    const negotiationInProgressRef =
+        useRef<Set<string>>(new Set());
+
+    const pendingIceCandidatesRef =
+        useRef<Map<string, RTCIceCandidateInit[]>>(
+            new Map()
+        );
+
+    const flushPendingIceCandidates =
+        useCallback(
+            async (
+                targetUserId: string,
+                peerConnection: RTCPeerConnection
+            ) => {
+                const queued =
+                    pendingIceCandidatesRef.current.get(
+                        targetUserId
+                    ) ?? [];
+
+                if (!queued.length) {
+                    return;
+                }
+
+                pendingIceCandidatesRef.current.delete(
+                    targetUserId
+                );
+
+                for (const candidate of queued) {
+                    try {
+                        await peerConnection.addIceCandidate(
+                            new RTCIceCandidate(candidate)
+                        );
+                    } catch (error) {
+                        console.warn(
+                            "[WebRTC] Ignorando ICE pendente:",
+                            error
+                        );
+                    }
+                }
+            },
+            []
+        );
+
+    const createPeerConnection =
+        useCallback(
+            (targetUserId: string) => {
+                const existing =
+                    peerConnectionsRef.current.get(
+                        targetUserId
+                    );
+
+                if (existing) {
+                    return existing;
+                }
+
+                const peerConnection =
+                    new RTCPeerConnection(
+                        getRtcConfiguration()
+                    );
+
+                peerConnection.onicecandidate =
+                    (event) => {
+                        if (!event.candidate) {
+                            return;
+                        }
+
+                        const candidate =
+                            event.candidate.toJSON();
+
+                        websocketRef.current?.send(
+                            "webrtc:ice:candidate",
+                            {
+                                user: userId,
+                                room: roomId,
+                                target: targetUserId,
+                                candidate
+                            }
+                        );
+                    };
+
+                peerConnection.onnegotiationneeded =
+                    () => {
+                        if (
+                            negotiationInProgressRef.current.has(
+                                targetUserId
+                            )
+                        ) {
+                            return;
+                        }
+
+                        void createOffer(
+                            targetUserId
+                        );
+                    };
+
+                peerConnection.ontrack =
+                    (event) => {
+                        const stream =
+                            event.streams?.[0] ??
+                            new MediaStream();
+
+                        if (event.track) {
+                            const hasTrack =
+                                stream
+                                    .getTracks()
+                                    .some(
+                                        (track) =>
+                                            track.id ===
+                                            event.track.id
+                                    );
+
+                            if (!hasTrack) {
+                                stream.addTrack(
+                                    event.track
+                                );
+                            }
+                        }
+
+                        if (
+                            stream.getTracks().length > 0
+                        ) {
+                            remoteStreamsRef.current.set(
+                                targetUserId,
+                                stream
+                            );
+
+                            setRemoteStreams(
+                                new Map(
+                                    remoteStreamsRef.current
+                                )
+                            );
+                        }
+                    };
+
+                peerConnection.onconnectionstatechange =
+                    () => {
+                        console.log(
+                            `[WebRTC] ${targetUserId}:`,
+                            peerConnection.connectionState
+                        );
+
+                        if (
+                            peerConnection.connectionState ===
+                                "failed" ||
+                            peerConnection.connectionState ===
+                                "closed"
+                        ) {
+                            peerConnectionsRef.current.delete(
+                                targetUserId
+                            );
+
+                            remoteStreamsRef.current.delete(
+                                targetUserId
+                            );
+
+                            setRemoteStreams(
+                                new Map(
+                                    remoteStreamsRef.current
+                                )
+                            );
+                        }
+                    };
+
+                peerConnectionsRef.current.set(
+                    targetUserId,
+                    peerConnection
+                );
+
+                return peerConnection;
+            },
+            [roomId, userId]
+        );
+
+    const updateLocalStream = useCallback(
+        (
+            cameraStream: MediaStream | null,
+            microphoneStream: MediaStream | null,
+            screenStream?: MediaStream | null
+        ) => {
+            const tracks: MediaStreamTrack[] = [];
+
+            if (screenStream) {
+                const screenVideo =
+                    screenStream.getVideoTracks()[0];
+                if (screenVideo) tracks.push(screenVideo);
+            } else {
+                const cameraVideo =
+                    cameraStream?.getVideoTracks()[0];
+                if (cameraVideo) tracks.push(cameraVideo);
+            }
+
+            const screenAudio =
+                screenStream?.getAudioTracks()[0];
+            if (screenAudio) tracks.push(screenAudio);
+
+            const microphone =
+                microphoneStream?.getAudioTracks()[0];
+            if (microphone) tracks.push(microphone);
+
+            const stream = new MediaStream(tracks);
+            localStreamRef.current = tracks.length ? stream : null;
+            setLocalStream(tracks.length ? stream : null);
+            return stream;
+        },
+        []
+    );
+
+    const addLocalTracksToPeer = useCallback(
+        (peerConnection: RTCPeerConnection) => {
+            const cameraStream = cameraStreamRef.current;
+            const microphoneStream = microphoneStreamRef.current;
+            const screenStream = screenStreamRef.current;
+
+            const videoTrack =
+                screenStream?.getVideoTracks()[0] ??
+                cameraStream?.getVideoTracks()[0];
+
+            if (videoTrack) {
+                const sender = peerConnection
+                    .getSenders()
+                    .find((item) => item.track?.kind === "video");
+
+                if (sender) {
+                    void sender.replaceTrack(videoTrack);
+                } else {
+                    peerConnection.addTrack(
+                        videoTrack,
+                        screenStream ?? cameraStream!
+                    );
+                }
+            }
+
+            const microphone =
+                microphoneStream?.getAudioTracks()[0];
+
+            if (microphone) {
+                const sender = peerConnection
+                    .getSenders()
+                    .find(
+                        (item) =>
+                            item.track?.kind === "audio" &&
+                            item.track?.id !==
+                                screenAudioTrackRef.current?.id
+                    );
+
+                if (sender) {
+                    void sender.replaceTrack(microphone);
+                } else {
+                    peerConnection.addTrack(
+                        microphone,
+                        microphoneStream!
+                    );
+                }
+            }
+
+            const screenAudio =
+                screenStream?.getAudioTracks()[0];
+
+            if (screenAudio) {
+                const exists = peerConnection
+                    .getSenders()
+                    .some((item) => item.track?.id === screenAudio.id);
+
+                if (!exists) {
+                    peerConnection.addTrack(
+                        screenAudio,
+                        screenStream!
+                    );
+                }
+            }
+        },
+        []
+    );
+
+    const startCamera = useCallback(async () => {
+        if (cameraStreamRef.current) {
+            return cameraStreamRef.current;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+        });
+
+        cameraStreamRef.current = stream;
+
+        updateLocalStream(
+            stream,
+            microphoneStreamRef.current,
+            screenStreamRef.current
+        );
+
+        for (const peerConnection of peerConnectionsRef.current.values()) {
+            addLocalTracksToPeer(peerConnection);
+        }
+
+        return stream;
+    }, [addLocalTracksToPeer, updateLocalStream]);
+
+    const stopCamera = useCallback(async () => {
+        const stream = cameraStreamRef.current;
+        if (!stream) return;
+
+        stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        cameraStreamRef.current = null;
+
+        const screenVideo =
+            screenStreamRef.current?.getVideoTracks()[0] ?? null;
+
+        for (const peerConnection of peerConnectionsRef.current.values()) {
+            const sender = peerConnection
+                .getSenders()
+                .find((item) => item.track?.kind === "video");
+
+            if (sender) {
+                if (screenVideo) {
+                    await sender.replaceTrack(screenVideo);
+                } else {
+                    peerConnection.removeTrack(sender);
+                }
+            }
+        }
+
+        updateLocalStream(
+            null,
+            microphoneStreamRef.current,
+            screenStreamRef.current
+        );
+    }, [updateLocalStream]);
+
+    const startMicrophone = useCallback(async () => {
+        if (microphoneStreamRef.current) {
+            return microphoneStreamRef.current;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: true
+        });
+
+        microphoneStreamRef.current = stream;
+
+        updateLocalStream(
+            cameraStreamRef.current,
+            stream,
+            screenStreamRef.current
+        );
+
+        for (const peerConnection of peerConnectionsRef.current.values()) {
+            addLocalTracksToPeer(peerConnection);
+        }
+
+        return stream;
+    }, [addLocalTracksToPeer, updateLocalStream]);
+
+    const stopMicrophone = useCallback(async () => {
+        const stream = microphoneStreamRef.current;
+        if (!stream) return;
+
+        stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        microphoneStreamRef.current = null;
+
+        for (const peerConnection of peerConnectionsRef.current.values()) {
+            const sender = peerConnection
+                .getSenders()
+                .find(
+                    (item) =>
+                        item.track?.kind === "audio" &&
+                        item.track?.id !==
+                            screenAudioTrackRef.current?.id
+                );
+
+            if (sender) {
+                peerConnection.removeTrack(sender);
+            }
+        }
+
+        updateLocalStream(
+            cameraStreamRef.current,
+            null,
+            screenStreamRef.current
+        );
+    }, [updateLocalStream]);
+
+    const startLocalMedia = useCallback(
+        async () => startCamera(),
+        [startCamera]
+    );
+
+    const stopScreenShare = useCallback(async () => {
+        const screenStream = screenStreamRef.current;
+        if (!screenStream) return;
+
+        const screenVideo = screenStream.getVideoTracks()[0];
+        const screenAudio = screenAudioTrackRef.current;
+        const cameraVideo = cameraStreamRef.current?.getVideoTracks()[0] ?? null;
+
+        for (const peerConnection of peerConnectionsRef.current.values()) {
+            const videoSender = peerConnection
+                .getSenders()
+                .find((item) => item.track?.id === screenVideo?.id);
+
+            if (videoSender) {
+                if (cameraVideo) {
+                    await videoSender.replaceTrack(cameraVideo);
+                } else {
+                    peerConnection.removeTrack(videoSender);
+                }
+            }
+
+            const audioSender = peerConnection
+                .getSenders()
+                .find((item) => item.track?.id === screenAudio?.id);
+
+            if (audioSender) {
+                peerConnection.removeTrack(audioSender);
+            }
+        }
+
+        screenStream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        screenAudioTrackRef.current = null;
+        screenStreamRef.current = null;
+
+        updateLocalStream(
+            cameraStreamRef.current,
+            microphoneStreamRef.current,
+            null
+        );
+
+        setIsScreenSharing(false);
+
+        websocketRef.current?.send("screen:stop", {
+            user: userId,
+            room: roomId
+        });
+    }, [roomId, updateLocalStream, userId]);
+
+    const startScreenShare =
+        useCallback(async () => {
+            try {
+                if (!userId || !roomId) {
+                    console.warn("[WebRTC] Impossível iniciar compartilhamento sem usuário ou sala.");
+                    return;
+                }
+
+                if (screenStreamRef.current) {
+                    return;
+                }
+
+                const isSecureOrigin =
+                    window.isSecureContext ||
+                    window.location.hostname === "localhost" ||
+                    window.location.hostname === "127.0.0.1" ||
+                    window.location.hostname === "192.168.1.101";
+
+                if (!isSecureOrigin) {
+                    throw new Error(
+                        "O compartilhamento de tela exige HTTPS/localhost. Acesse a app via https://localhost ou https://<IP-da-rede> com certificado confiável."
+                    );
+                }
+
+                const screenStream =
+                    await navigator.mediaDevices.getDisplayMedia(
+                        {
+                            video: true,
+                            audio: true
+                        }
+                    );
+
+                const screenVideo =
+                    screenStream.getVideoTracks()[0];
+
+                if (!screenVideo) {
+                    screenStream
+                        .getTracks()
+                        .forEach((track) =>
+                            track.stop()
+                        );
+
+                    return;
+                }
+
+                screenStreamRef.current =
+                    screenStream;
+
+                const screenAudio =
+                    screenStream.getAudioTracks()[0] ?? null;
+
+                screenAudioTrackRef.current =
+                    screenAudio;
+
+                screenVideo.onended = () => {
+                    stopScreenShare();
+                };
+
+                for (const peerConnection of
+                    peerConnectionsRef.current.values()) {
+                    const videoSender =
+                        peerConnection
+                            .getSenders()
+                            .find(
+                                (sender) =>
+                                    sender.track?.kind ===
+                                    "video"
+                            );
+
+                    if (videoSender) {
+                        await videoSender.replaceTrack(
+                            screenVideo
+                        );
+                    } else {
+                        peerConnection.addTrack(
+                            screenVideo,
+                            screenStream
+                        );
+                    }
+
+                    if (screenAudio) {
+                        const hasScreenAudio =
+                            peerConnection
+                                .getSenders()
+                                .some(
+                                    (sender) =>
+                                        sender.track?.id ===
+                                        screenAudio.id
+                                );
+
+                        if (!hasScreenAudio) {
+                            peerConnection.addTrack(
+                                screenAudio,
+                                screenStream
+                            );
+                        }
+                    }
+                }
+
+                updateLocalStream(
+                    cameraStreamRef.current,
+                    microphoneStreamRef.current,
+                    screenStream
+                );
+
+                setIsScreenSharing(true);
+
+                websocketRef.current?.send(
+                    "screen:start",
+                    {
+                        user: userId,
+                        room: roomId
+                    }
+                );
+
+                console.log(
+                    "[WebRTC] Compartilhamento de tela iniciado."
+                );
+            } catch (error) {
+                console.error(
+                    "[WebRTC] Não foi possível compartilhar a tela:",
+                    error
+                );
+            }
+        }, [
+            stopScreenShare,
+            updateLocalStream
+        ]);
+
+    const createOffer =
+        useCallback(
+            async (targetUserId: string) => {
+                if (!userId || !roomId) {
+                    return;
+                }
+
+                if (
+                    negotiationInProgressRef.current.has(
+                        targetUserId
+                    )
+                ) {
+                    return;
+                }
+
+                negotiationInProgressRef.current.add(
+                    targetUserId
+                );
+
+                try {
+                    const peerConnection =
+                        createPeerConnection(
+                            targetUserId
+                        );
+
+                    if (
+                        peerConnection.signalingState !==
+                        "stable"
+                    ) {
+                        return;
+                    }
+
+                    addLocalTracksToPeer(peerConnection);
+
+                    const offer =
+                        await peerConnection.createOffer();
+
+                    await peerConnection.setLocalDescription(
+                        offer
+                    );
+
+                    websocketRef.current?.send(
+                        "webrtc:offer",
+                        {
+                            user: userId,
+                            room: roomId,
+                            target: targetUserId,
+                            sdp: offer
+                        }
+                    );
+                } finally {
+                    negotiationInProgressRef.current.delete(
+                        targetUserId
+                    );
+                }
+            },
+            [
+                addLocalTracksToPeer,
+                createPeerConnection,
+                roomId,
+                userId
+            ]
+        );
+
+    const handleOffer =
+        useCallback(
+            async (data: WebRTCSignal) => {
+                if (!userId || !roomId || !data.user) {
+                    return;
+                }
+
+                if (
+                    negotiationInProgressRef.current.has(
+                        data.user
+                    )
+                ) {
+                    return;
+                }
+
+                negotiationInProgressRef.current.add(
+                    data.user
+                );
+
+                try {
+                    const peerConnection =
+                        createPeerConnection(
+                            data.user
+                        );
+
+                    if (
+                        peerConnection.signalingState !==
+                        "stable"
+                    ) {
+                        return;
+                    }
+
+                    addLocalTracksToPeer(peerConnection);
+
+                    if (!data.sdp) {
+                        return;
+                    }
+
+                    await peerConnection.setRemoteDescription(
+                        new RTCSessionDescription(
+                            data.sdp
+                        )
+                    );
+
+                    await flushPendingIceCandidates(
+                        data.user,
+                        peerConnection
+                    );
+
+                    const answer =
+                        await peerConnection.createAnswer();
+
+                    await peerConnection.setLocalDescription(
+                        answer
+                    );
+
+                    websocketRef.current?.send(
+                        "webrtc:answer",
+                        {
+                            user: userId,
+                            room: roomId,
+                            target: data.user,
+                            sdp: answer
+                        }
+                    );
+                } finally {
+                    negotiationInProgressRef.current.delete(
+                        data.user
+                    );
+                }
+            },
+            [
+                addLocalTracksToPeer,
+                createPeerConnection,
+                flushPendingIceCandidates,
+                roomId,
+                userId
+            ]
+        );
+
+    const handleAnswer =
+        useCallback(
+            async (data: WebRTCSignal) => {
+                const peerConnection =
+                    peerConnectionsRef.current.get(
+                        data.user
+                    );
+
+                if (!peerConnection) {
+                    console.warn(
+                        "[WebRTC] PeerConnection não encontrada:",
+                        data.user
+                    );
+
+                    return;
+                }
+
+                if (!data.sdp) {
+                    return;
+                }
+
+                await peerConnection.setRemoteDescription(
+                    new RTCSessionDescription(
+                        data.sdp
+                    )
+                );
+
+                await flushPendingIceCandidates(
+                    data.user,
+                    peerConnection
+                );
+            },
+            [flushPendingIceCandidates]
+        );
+
+    const handleIceCandidate =
+        useCallback(
+            async (data: WebRTCSignal) => {
+                const peerConnection =
+                    peerConnectionsRef.current.get(
+                        data.user
+                    );
+
+                if (!peerConnection) {
+                    const existing =
+                        pendingIceCandidatesRef.current.get(
+                            data.user
+                        ) ?? [];
+
+                    if (data.candidate) {
+                        existing.push(data.candidate);
+                        pendingIceCandidatesRef.current.set(
+                            data.user,
+                            existing
+                        );
+                    }
+
+                    console.warn(
+                        "[WebRTC] PeerConnection ainda não criada para ICE; candidato foi enfileirado.",
+                        data.user
+                    );
+
+                    return;
+                }
+
+                if (!data.candidate) {
+                    return;
+                }
+
+                await peerConnection.addIceCandidate(
+                    new RTCIceCandidate(
+                        data.candidate
+                    )
+                );
+            },
+            []
+        );
+
+    useEffect(() => {
+        if (!userId || !roomId) {
+            setConnected(false);
+            setRemoteStreams(new Map());
+            return;
+        }
+
+        const websocket =
+            new BroadcastWebSocket();
+
+        websocketRef.current =
+            websocket;
+
+        let unsubscribe:
+            (() => void) | null = null;
+
+        async function initialize() {
+            try {
+                await websocket.connect();
+
+                setConnected(true);
+
+                unsubscribe =
+                    websocket.onMessage(
+                        (
+                            message: WebSocketMessage
+                        ) => {
+                            const data =
+                                message.data as Partial<WebRTCSignal> & {
+                                    participants?: Array<
+                                        { user?: string; id?: string }
+                                    >;
+                                };
+
+                            switch (
+                                message.event
+                            ) {
+                                case "webrtc:offer":
+                                    void handleOffer(
+                                        data as WebRTCSignal
+                                    );
+                                    break;
+
+                                case "webrtc:answer":
+                                    void handleAnswer(
+                                        data as WebRTCSignal
+                                    );
+                                    break;
+
+                                case "webrtc:ice:candidate":
+                                    void handleIceCandidate(
+                                        data as WebRTCSignal
+                                    );
+                                    break;
+
+                                case "room:participants":
+                                    const participantList =
+                                        Array.isArray(
+                                            data.participants
+                                        )
+                                            ? data.participants
+                                            : Array.isArray(
+                                                  data as unknown as Array<
+                                                      { user?: string; id?: string }
+                                                  >
+                                              )
+                                              ? (data as unknown as Array<
+                                                    { user?: string; id?: string }
+                                                >)
+                                              : [];
+
+                                    for (const participant of participantList) {
+                                        const targetUserId =
+                                            participant.user ?? participant.id;
+
+                                        if (
+                                            targetUserId &&
+                                            targetUserId !== userId
+                                        ) {
+                                            void createOffer(
+                                                targetUserId
+                                            );
+                                        }
+                                    }
+                                    break;
+
+                                case "participant:join":
+                                    if (
+                                        data.user &&
+                                        data.user !== userId
+                                    ) {
+                                        void createOffer(
+                                            data.user
+                                        );
+                                    }
+                                    break;
+
+                                case "screen:start":
+                                    if (data.user && data.user !== userId) {
+                                        sharingUsersRef.current.add(data.user);
+                                        setSharingUsers(Array.from(sharingUsersRef.current));
+                                    }
+                                    break;
+
+                                case "screen:stop":
+                                    if (data.user) {
+                                        sharingUsersRef.current.delete(data.user);
+                                        setSharingUsers(Array.from(sharingUsersRef.current));
+                                    }
+                                    break;
+                            }
+                        }
+                    );
+
+                websocket.send(
+                    "room:join",
+                    {
+                        user: userId,
+                        room: roomId
+                    }
+                );
+            } catch (error) {
+                console.error(
+                    "[WebRTC] Falha ao iniciar:",
+                    error
+                );
+            }
+        }
+
+        void initialize();
+
+        return () => {
+            unsubscribe?.();
+
+            if (
+                websocket.connected
+            ) {
+                websocket.send(
+                    "room:leave",
+                    {
+                        user: userId,
+                        room: roomId
+                    }
+                );
+            }
+
+            websocket.disconnect();
+
+            for (const peerConnection of
+                peerConnectionsRef.current.values()) {
+                peerConnection.close();
+            }
+
+            peerConnectionsRef.current.clear();
+
+            screenStreamRef.current
+                ?.getTracks()
+                .forEach((track: MediaStreamTrack) =>
+                    track.stop()
+                );
+
+            cameraStreamRef.current
+                ?.getTracks()
+                .forEach((track: MediaStreamTrack) =>
+                    track.stop()
+                );
+
+            microphoneStreamRef.current
+                ?.getTracks()
+                .forEach((track: MediaStreamTrack) =>
+                    track.stop()
+                );
+
+            screenStreamRef.current = null;
+            screenAudioTrackRef.current = null;
+            cameraStreamRef.current = null;
+            microphoneStreamRef.current = null;
+            localStreamRef.current = null;
+
+            remoteStreamsRef.current.clear();
+            setConnected(false);
+        };
+    }, [
+        createOffer,
+        handleAnswer,
+        handleIceCandidate,
+        handleOffer,
+        roomId,
+        userId
+    ]);
+
+    return {
+        connected,
+        localStream,
+        remoteStreams,
+        isScreenSharing,
+        sharingUsers,
+        startLocalMedia,
+        startCamera,
+        stopCamera,
+        startMicrophone,
+        stopMicrophone,
+        startScreenShare,
+        stopScreenShare,
+        createOffer
+    };
+}

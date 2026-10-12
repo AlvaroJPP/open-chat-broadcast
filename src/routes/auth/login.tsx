@@ -46,11 +46,20 @@ function RouteComponent() {
         }),
       })
 
-    const result = await response.json()
+      const rawText = await response.text()
+      let result: any = null
 
-      if (!response.ok || !result.success) {
+      if (rawText) {
+        try {
+          result = JSON.parse(rawText)
+        } catch {
+          throw new Error(rawText || 'Resposta inválida do servidor.')
+        }
+      }
+
+      if (!response.ok || !result?.success) {
         throw new Error(
-          result?.error?.message || 'Apelido ou senha inválidos.'
+          result?.error?.message || rawText || 'Apelido ou senha inválidos.'
         )
       }
 

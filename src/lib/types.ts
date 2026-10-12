@@ -4,6 +4,7 @@ export interface Participant {
     id: string;
     name: string;
     isYou?: boolean;
+    isHost?: boolean; // anfitrião (dono) da sala
     status: ParticipantStatus;
     avatarColor: string; // tailwind bg-* class for the avatar fallback
     micMuted?: boolean;

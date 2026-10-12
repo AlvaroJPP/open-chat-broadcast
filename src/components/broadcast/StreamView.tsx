@@ -1,10 +1,5 @@
 import type { ReactNode } from "react";
-import {
-    Maximize2,
-    MonitorUp
-} from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import type { Participant } from "@/lib/types";
 
 interface StreamViewProps {
@@ -14,78 +9,36 @@ interface StreamViewProps {
     onShareScreen?: () => void;
     onStopShareScreen?: () => void;
     isScreenSharing?: boolean;
+    className?: string;
     children: ReactNode;
 }
 
+/**
+ * Área da transmissão principal. Os botões de transmitir ficam
+ * na barra inferior da sala (BroadcastControls).
+ */
 export function StreamView({
     presenter,
     isLive,
-    onExpand,
-    onShareScreen,
-    onStopShareScreen,
-    isScreenSharing = false,
-    children
+    className = "",
+    children,
 }: StreamViewProps) {
     return (
-        <section className="flex min-w-0 flex-1 flex-col rounded-2xl border border-border bg-card">
-            <div className="flex items-center gap-3 border-b border-border px-5 py-3.5">
+        <section className={`flex min-w-0 flex-1 flex-col border border-border bg-card ${className}`}>
+            <div className="flex items-center gap-2.5 px-3 py-2.5 text-sm">
                 {isLive && (
-                    <Badge
-                        variant="live"
-                        className="gap-1.5 pl-2"
-                    >
-                        <span className="size-1.5 rounded-full bg-destructive-foreground" />
+                    <span className="bg-destructive px-2 py-0.5 text-[11px] font-bold text-white">
                         AO VIVO
-                    </Badge>
+                    </span>
                 )}
 
-                <span className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                        {presenter.name}
-                    </span>{" "}
-                    está transmitindo sua tela
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                    <span className="font-bold text-foreground">{presenter.name}</span>{" "}
+                    <span className="hidden sm:inline">está transmitindo sua tela</span>
                 </span>
-
-                <button
-                    type="button"
-                    onClick={onExpand}
-                    className="ml-auto flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                    aria-label="Expandir transmissão"
-                >
-                    <Maximize2 className="size-4" />
-                </button>
             </div>
 
-            <div className="min-h-0 flex-1 p-4">
-                {children}
-            </div>
-
-            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
-                <span className="inline-flex items-center gap-2 rounded-lg bg-secondary/60 px-3 py-2 text-sm text-foreground">
-                    <MonitorUp className="size-4 text-muted-foreground" />
-
-                    Tela de {presenter.name}
-                </span>
-
-                {isScreenSharing ? (
-                    <button
-                        type="button"
-                        onClick={onStopShareScreen}
-                        className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
-                    >
-                        Parar transmissão
-                    </button>
-                ) : (
-                    <button
-                        type="button"
-                        onClick={onShareScreen}
-                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                    >
-                        <MonitorUp className="size-4" />
-                        Transmitir tela
-                    </button>
-                )}
-            </div>
+            <div className="min-h-0 flex-1 px-3 pb-3">{children}</div>
         </section>
     );
 }

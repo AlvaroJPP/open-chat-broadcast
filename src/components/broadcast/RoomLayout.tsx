@@ -1,151 +1,229 @@
-import { BroadcastHeader } from "./BroadcastHeader";
-import { ChatPanel } from "./ChatPanel";
-import { CodeEditorPreview } from "./CodeEditorPreview";
-import { ParticipantsPanel } from "./ParticipantsPanel";
-import { RoomPanel } from "./RoomPanel";
-import { StreamView } from "./StreamView";
-import type { ChatMessageData, Participant, RoomInfo } from "@/lib/types";
-import { useWebRTC } from "@/hooks/use-webrtc";
+import {useState} from "react"
+
+import {BroadcastHeader} from "./BroadcastHeader"
+import {BroadcastControls} from "./BroadcastControls"
+import {RoomStreamStage} from "./RoomStreamStage"
+import {RoomParticipantsDrawer} from "./RoomParticipantsDrawer"
+import {StreamView} from "./StreamView"
+import {RoomChatSection} from "./RoomChatSection"
+import {RoomParticipantsSidebar} from "./RoomParticipantsSidebar"
+
+
+import {useIsMobile} from "@/hooks/use-mobile"
+import {useRoomMedia} from "@/hooks/room/useRoomMedia"
+import {useRoomVolume} from "@/hooks/room/useRoomVolume"
+import {useRoomFullscreen} from "@/hooks/room/useRoomFullscreen"
+import {useRoomStreams} from "@/hooks/room/useRoomStreams"
+import {useLeaveRoom} from "@/hooks/room/useLeaveRoom"
+import {useRoomKeyboardShortcuts} from "@/hooks/room/useRoomKeyboardShortcuts"
+import {useRoomControls} from "@/hooks/room/useRoomControls"
+import type { StreamQuality } from "@/hooks/webrtc/webrtc.types"
+
+import type {ChatMessageData, Participant, RoomInfo} from "@/lib/types"
 
 interface RoomLayoutProps {
-    room: RoomInfo;
-    participants: Participant[];
-    messages: ChatMessageData[];
+room: RoomInfo
+participants: Participant[]
+messages: ChatMessageData[]
 }
 
-export function RoomLayout({
-    room,
-    participants,
-    messages
-}: RoomLayoutProps) {
-    const currentUser =
-        participants.find((p) => p.isYou) ??
-        participants[0];
+export function RoomLayout({room, participants, messages}: RoomLayoutProps) {
+const fallbackCurrentUser: Participant = {
+id: "unknown",
+name: "Participante",
+isYou: false,
+status: "assistindo",
+avatarColor: "bg-primary",
+micMuted: false,
+isSharingScreen: false,
+}
 
-    if (!currentUser) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-background">
-                <p className="text-muted-foreground">
-                    Nenhum participante encontrado.
-                </p>
-            </div>
-        );
-    }
+const currentUser =
+participants.find(participant => participant.isYou) ??
+participants[0] ??
+fallbackCurrentUser
 
-    const presenter =
-        participants.find((p) => p.isSharingScreen) ??
-        currentUser;
+const isMobile = useIsMobile()
 
-    const {
-        connected,
-        localStream,
-        remoteStreams,
-        isScreenSharing,
-        startScreenShare,
-        stopScreenShare
-    } = useWebRTC({
-        userId: currentUser.id,
-        roomId: room.id
-    });
+const [menuOpen, setMenuOpen] = useState(false)
+const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null)
 
-    return (
-        <div className="flex h-screen flex-col bg-background">
-            <BroadcastHeader
-                room={room}
-                participantCount={participants.length}
-                currentUser={currentUser}
-            />
+const {volume, muted, setMuted, handleVolumeChange} = useRoomVolume()
 
-            <main className="flex min-h-0 flex-1 gap-4 overflow-hidden p-4">
-                <aside className="flex w-80 shrink-0 flex-col gap-4 overflow-y-auto">
-                    <ParticipantsPanel
-                        participants={participants}
-                    />
+const {fullscreenRef, isFullscreen, handleToggleFullscreen} =
+useRoomFullscreen()
 
-                    <RoomPanel room={room} />
-                </aside>
+useRoomKeyboardShortcuts({
+enabled: menuOpen,
+onEscape: () => setMenuOpen(false),
+})
 
-                <StreamView
-                    presenter={presenter}
-                    isLive={room.isLive}
-                    onShareScreen={startScreenShare}
-                    onStopShareScreen={stopScreenShare}
-                    isScreenSharing={isScreenSharing}
-                >
-                    <div className="relative flex h-full min-h-0 flex-col gap-4">
-                        <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black">
-                            {Array.from(
-                                remoteStreams.entries()
-                            ).map(
-                                ([userId, stream]) => (
-                                    <video
-                                        key={userId}
-                                        ref={(element) => {
-                                            if (element) {
-                                                element.srcObject = stream;
-                                            }
-                                        }}
-                                        autoPlay
-                                        playsInline
-                                        className="absolute inset-0 h-full w-full object-contain"
-                                    />
-                                )
-                            )}
+const {
+connected,
+localStream,
+remoteStreams,
+isScreenSharing,
+isCameraOn,
+isMicOn,
+sharingUsers,
+mediaStates,
+peerStates,
+lastError,
+streamQuality,
+setStreamQuality,
+startCamera,
+stopCamera,
+startMic,
+stopMic,
+startScreenShare,
+stopScreenShare,
+stopAllMedia,
+} = useRoomMedia({
+userId: currentUser.id,
+roomId: room.id,
+})
 
-                            {remoteStreams.size === 0 &&
-                                isScreenSharing &&
-                                localStream && (
-                                    <video
-                                        ref={(element) => {
-                                            if (element) {
-                                                element.srcObject =
-                                                    localStream;
-                                            }
-                                        }}
-                                        autoPlay
-                                        muted
-                                        playsInline
-                                        className="absolute inset-0 h-full w-full object-contain"
-                                    />
-                                )}
+const {
+handleToggleScreen,
+handleToggleCamera,
+handleToggleMic,
+} = useRoomControls({
+isScreenSharing,
+isCameraOn,
+isMicOn,
+startScreenShare,
+stopScreenShare,
+startCamera,
+stopCamera,
+startMic,
+stopMic,
+})
 
-                            {remoteStreams.size === 0 &&
-                                !isScreenSharing && (
-                                    <div className="flex h-full items-center justify-center">
-                                        <p className="text-sm text-muted-foreground">
-                                            Aguardando transmissão...
-                                        </p>
-                                    </div>
-                                )}
-                        </div>
+const handleStreamQualityChange = (nextQuality: StreamQuality) => {
+void setStreamQuality(nextQuality)
+}
 
-                        {localStream && !isScreenSharing && (
-                            <video
-                                ref={(element) => {
-                                    if (element) {
-                                        element.srcObject = localStream;
-                                    }
-                                }}
-                                autoPlay
-                                muted
-                                playsInline
-                                className="absolute bottom-4 right-4 z-10 h-32 w-48 rounded-xl border border-border bg-black object-cover shadow-lg"
-                            />
-                        )}
+const {handleLeave} = useLeaveRoom({
+roomId: room.id,
+userId: currentUser.id,
+stopAllMedia,
+})
 
-                        {!connected && (
-                            <div className="absolute left-4 top-4 rounded-lg bg-black/70 px-3 py-2 text-xs text-white">
-                                Conectando ao servidor...
-                            </div>
-                        )}
-                    </div>
-                </StreamView>
+const {
+remoteStreamEntries,
+activeStreamEntries,
+primaryId,
+primaryStream,
+isPrimaryLocal,
+primaryStreamLabel,
+presenter,
+liveIds,
+} = useRoomStreams({
+localStream,
+remoteStreams,
+isScreenSharing,
+isCameraOn,
+sharingUsers,
+mediaStates,
+participants,
+currentUser,
+selectedStreamId,
+})
 
-                <ChatPanel
-                    messages={messages}
-                    currentUser={currentUser}
-                />
-            </main>
-        </div>
-    );
+const mainClassName = isMobile
+    ? "flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain p-2.5 pb-6"
+    : "flex min-h-0 min-w-0 flex-1 gap-3 overflow-hidden p-3";
+
+const streamClassName = isMobile
+    ? "order-1 w-full min-w-0 shrink-0"
+    : "min-w-0";
+
+const peerDebugLabel =
+Object.keys(peerStates).length === 0
+? "nenhum"
+: Object.entries(peerStates)
+.map(([id, state]) => `${id.slice(-4)}=${state}`)
+.join(", ")
+
+return (
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-background">
+<BroadcastHeader
+room={room}
+participantCount={participants.length}
+currentUser={currentUser}
+onLeave={handleLeave}
+onOpenParticipants={() => setMenuOpen(true)}
+/>
+
+  <main className={mainClassName}>
+    {!isMobile && (
+      <RoomParticipantsSidebar
+        participants={participants}
+        liveIds={liveIds}
+        room={room}
+      />
+    )}
+
+    <StreamView
+      presenter={presenter}
+      isLive={room.isLive}
+      onShareScreen={startScreenShare}
+      onStopShareScreen={stopScreenShare}
+      isScreenSharing={isScreenSharing}
+      className={streamClassName}
+    >
+      <RoomStreamStage
+        fullscreenRef={fullscreenRef}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={handleToggleFullscreen}
+        onSelectStream={setSelectedStreamId}
+        primaryStream={primaryStream}
+        primaryId={primaryId}
+        primaryStreamLabel={primaryStreamLabel}
+        isPrimaryLocal={isPrimaryLocal}
+        volume={volume}
+        muted={muted}
+        onVolumeChange={handleVolumeChange}
+        onMutedChange={setMuted}
+        streamQuality={streamQuality}
+        onStreamQualityChange={handleStreamQualityChange}
+        remoteStreamEntries={remoteStreamEntries}
+        activeStreamEntries={activeStreamEntries}
+        participants={participants}
+        currentUser={currentUser}
+        connected={connected}
+        peerDebugLabel={peerDebugLabel}
+        lastError={lastError}
+      />
+    </StreamView>
+
+    <RoomChatSection
+      messages={messages}
+      currentUser={currentUser}
+      roomId={room.id}
+      isMobile={isMobile}
+    />
+  </main>
+
+  <BroadcastControls
+    isScreenSharing={isScreenSharing}
+    isCameraOn={isCameraOn}
+    isMicOn={isMicOn}
+    onToggleScreen={handleToggleScreen}
+    onToggleCamera={handleToggleCamera}
+    onToggleMic={handleToggleMic}
+    onLeave={handleLeave}
+  />
+
+  {isMobile && menuOpen && (
+    <RoomParticipantsDrawer
+      room={room}
+      participants={participants}
+      liveIds={liveIds}
+      onClose={() => setMenuOpen(false)}
+    />
+  )}
+</div>
+
+)
 }

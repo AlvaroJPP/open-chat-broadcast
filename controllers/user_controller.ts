@@ -55,8 +55,17 @@ const userController = {
 
     async findById(req: Request, res: Response) {
         try {
-            if (Array.isArray(req.params.id)) req.params.id = req.params.id[0];
-            const user = await findUserById(req.params.id);
+            const rawId = req.params["id"];
+            const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: { status: 400, message: "ID do usuário é obrigatório." },
+                });
+            }
+
+            const user = await findUserById(id);
 
             return res.status(200).json({
                 success: true,
@@ -71,9 +80,17 @@ const userController = {
     async update(req: Request, res: Response) {
         try {
             const { nickname, avatar, status } = req.body;
+            const rawId = req.params["id"];
+            const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
-            if (Array.isArray(req.params.id)) req.params.id = req.params.id[0];
-            const user = await updateUser(req.params.id, { nickname, avatar, status });
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: { status: 400, message: "ID do usuário é obrigatório." },
+                });
+            }
+
+            const user = await updateUser(id, { nickname, avatar, status });
 
             return res.status(200).json({
                 success: true,
@@ -87,8 +104,17 @@ const userController = {
 
     async delete(req: Request, res: Response) {
         try {
-            if (Array.isArray(req.params.id)) req.params.id = req.params.id[0];
-            await deleteUser(req.params.id);
+            const rawId = req.params["id"];
+            const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    error: { status: 400, message: "ID do usuário é obrigatório." },
+                });
+            }
+
+            await deleteUser(id);
 
             return res.status(200).json({
                 success: true,

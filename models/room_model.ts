@@ -63,7 +63,7 @@ const roomSchema = new mongoose.Schema(
 );
 
 const roomModel =
-    mongoose.models.Room ||
-    mongoose.model("Room", roomSchema);
+    ((mongoose.models["Room"] as mongoose.Model<any> | undefined) ??
+    mongoose.model<any>("Room", roomSchema)) as any;
 
 export default roomModel;

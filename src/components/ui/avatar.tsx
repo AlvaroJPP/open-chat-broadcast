@@ -7,7 +7,7 @@ function Avatar({ className, ...props }: React.ComponentProps<typeof AvatarPrimi
   return (
     <AvatarPrimitive.Root
       className={cn(
-        "relative flex size-10 shrink-0 overflow-hidden rounded-full",
+        "relative flex size-10 shrink-0 overflow-hidden rounded-none",
         className,
       )}
       {...props}
@@ -28,7 +28,7 @@ function AvatarFallback({
   return (
     <AvatarPrimitive.Fallback
       className={cn(
-        "flex size-full items-center justify-center rounded-full text-sm font-semibold text-white",
+        "flex size-full items-center justify-center rounded-none text-sm font-semibold text-white",
         className,
       )}
       {...props}
