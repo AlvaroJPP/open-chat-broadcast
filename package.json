@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "cli:server": "tsx cli/server.js",
     "cli:server:dev": "tsx --watch cli/server.js",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "start": "concurrently \"npm run preview\" \"npm run cli:server\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
