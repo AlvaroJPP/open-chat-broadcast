@@ -3,6 +3,7 @@ import cors from "cors";
 
 import config from "./config.ts";
 import http from "./http.js";
+import mongodb from "./mongodb.ts";
 
 import userRouter from "../routers/user_router.ts";
 import broadcastRouter from "../routers/broadcast_router.ts";
@@ -12,16 +13,8 @@ import mediaRouter from "../routers/media_router.ts";
 
 const app = express();
 
-// ============================================================
-// MIDDLEWARES
-// ============================================================
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// ============================================================
-// CORS
-// ============================================================
 
 const allowedOrigins = config.http.allowedOrigins ?? [];
 
@@ -31,44 +24,32 @@ const lanOrigin =
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin) {
+      if (!origin || allowedOrigins.includes(origin) || lanOrigin.test(origin)) {
         return callback(null, true);
       }
 
-      if (
-        allowedOrigins.includes(origin) ||
-        lanOrigin.test(origin)
-      ) {
-        return callback(null, true);
-      }
-
-      return callback(
-        new Error(`Origem não permitida pelo CORS: ${origin}`)
-      );
+      return callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
     },
     credentials: true,
-  })
+  }),
 );
-
-// ============================================================
-// SEGURANÇA
-// ============================================================
 
 app.use(http.ipFilter);
 
-// ============================================================
-// ROTAS DA API
-// ============================================================
+// Vercel pode reutilizar a mesma instância entre requisições.
+// connect() reaproveita a conexão Mongoose quando ela já está aberta.
+app.use((req, res, next) => {
+  void mongodb.connect().then(
+    () => next(),
+    (error: unknown) => next(error),
+  );
+});
 
 app.use("/api/users", userRouter);
 app.use("/api/broadcasts", broadcastRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api", messageRouter);
 app.use("/api/media", mediaRouter);
-
-// ============================================================
-// TRATAMENTO DE ERROS
-// ============================================================
 
 app.use(http.notFoundHandler);
 app.use(http.errorHandler);
