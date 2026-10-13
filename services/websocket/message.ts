@@ -4,6 +4,7 @@ import messageModel from "../../models/message_model.js";
 import roomModel from "../../models/room_model.js";
 
 import type { ConnectedClient } from "./room.js";
+import realtimeBus from "./realtime_bus.js";
 
 type RoomParticipant = {
     user: {
@@ -146,6 +147,8 @@ export async function sendMessage(
             );
         }
     }
+
+    await realtimeBus.publish({ event: "message:new", data: messageData, roomId: data.room });
 
     console.log(
         `[WEBSOCKET] Mensagem enviada na sala ${data.room}.`
