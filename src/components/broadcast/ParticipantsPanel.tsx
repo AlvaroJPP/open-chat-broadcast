@@ -83,7 +83,7 @@ export function ParticipantsPanel({
                                 <span>{watching.length}</span>
                             </p>
                             {watching.map((participant) => (
-                                <ParticipantItem key={participant.id} participant={participant} canKick={canManageParticipants} onKick={onKickParticipant} />
+                                <ParticipantItem key={participant.id} participant={participant} canKick={canManageParticipants} onKick={onKickParticipant} canManage={canManageParticipants} onTransferOwnership={onTransferOwnership} onToggleMute={onToggleMuteParticipant} />
                             ))}
                         </>
                     )}
