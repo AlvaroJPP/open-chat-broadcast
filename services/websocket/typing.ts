@@ -4,7 +4,6 @@ import roomModel from "../../models/room_model.ts";
 
 import type { ConnectedClient } from "./room.ts";
 import realtimeBus from "./realtime_bus.js";
-import realtimeBus from "./realtime_bus.js";
 
 type TypingData = {
     user: string;
