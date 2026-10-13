@@ -188,9 +188,20 @@ export function RoomsList({
                 className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 border-b border-border px-4 py-3.5 md:grid-cols-[minmax(0,1.6fr)_130px_90px_150px]"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-bold">{room.name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate font-bold">{room.name}</p>
+                    {room.visibility === 'private' ? (
+                      <span className="inline-flex items-center gap-1 border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <LockKeyhole className="size-3" /> Privada
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <Globe className="size-3" /> Pública
+                      </span>
+                    )}
+                  </div>
                   <p className="truncate text-xs text-muted-foreground">
-                    ID: {room._id}
+                    Código: {room._id}
                   </p>
                 </div>
 
