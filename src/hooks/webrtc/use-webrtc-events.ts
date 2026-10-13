@@ -27,6 +27,7 @@ type UseWebRTCEventsOptions = {
   sendMediaState: () => void
 
   setLastError: (error: string | null) => void
+  stopMic: () => void
 
   setSharingUsers: React.Dispatch<React.SetStateAction<string[]>>
 
@@ -45,6 +46,7 @@ export function useWebRTCEvents({
   handleIceCandidate,
   sendMediaState,
   setLastError,
+  stopMic,
   setSharingUsers,
   setMediaStates,
 }: UseWebRTCEventsOptions) {
@@ -59,6 +61,14 @@ export function useWebRTCEvents({
       }
 
       switch (message.event) {
+        case "room:mute:force": {
+          if (data.room === roomId && data.user === userId && data.muted === true) {
+            stopMic()
+            setLastError(data.message ?? "Seu microfone foi silenciado pelo proprietário.")
+          }
+          break
+        }
+
         case "room:error":
         case "webrtc:error":
         case "screen:error": {
@@ -202,6 +212,7 @@ export function useWebRTCEvents({
       roomId,
       sendMediaState,
       setLastError,
+      stopMic,
       setMediaStates,
       setSharingUsers,
       sharingUsersRef,
