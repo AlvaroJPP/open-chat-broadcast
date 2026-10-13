@@ -426,7 +426,7 @@ function RoomsPage() {
       return
     }
 
-    await handleJoinRoom(id)
+    await handleJoinRoom(id, id)
   }
 
   /**
