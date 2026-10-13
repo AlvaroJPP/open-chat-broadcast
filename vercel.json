@@ -8,11 +8,7 @@
   },
   "rewrites": [
     {
-      "source": "/auth/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/rooms/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
