@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { RoomLayout } from "@/components/broadcast/RoomLayout";
 import { getCurrentUserId } from "@/lib/current-user";
+import { API_BASE_URL } from "@/lib/config";
 import { BroadcastWebSocket } from "@/lib/websocket";
 import type {
     ChatMessageData,
@@ -199,7 +200,7 @@ function RoomPage() {
 
             const joinResponse =
                 await fetch(
-                    `/api/rooms/${id}/join`,
+                    `${API_BASE_URL}/rooms/${id}/join`,
                     {
                         method: "POST",
                         headers: {
@@ -231,7 +232,7 @@ function RoomPage() {
 
             const roomResponse =
                 await fetch(
-                    `/api/rooms/${id}`
+                    `${API_BASE_URL}/rooms/${id}`
                 );
 
             if (!roomResponse.ok) {
@@ -281,7 +282,7 @@ function RoomPage() {
 
             const messagesResponse =
                 await fetch(
-                    `/api/rooms/${id}/messages`
+                    `${API_BASE_URL}/rooms/${id}/messages`
                 );
 
             if (!messagesResponse.ok) {
