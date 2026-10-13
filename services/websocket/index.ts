@@ -11,6 +11,7 @@ import {
   leaveRoom,
   removeOfflineParticipant,
   broadcastRoomParticipants,
+  kickParticipant,
 } from "./room.js";
 
 import { sendMessage } from "./message.js";
@@ -76,12 +77,12 @@ async function handleMessage(
       case "room:leave": {
         const data = payload.data;
         await leaveRoom(client, data, clients);
-
-        if (data?.user && data?.room) {
-          cancelOfflineTimer(data.user, data.room);
-        }
+        if (data?.user && data?.room) cancelOfflineTimer(data.user, data.room);
         break;
       }
+      case "room:kick":
+        await kickParticipant(client, payload.data, clients);
+        break;
 
       case "message:send":
         await sendMessage(client, payload.data, clients);
@@ -138,6 +139,15 @@ function start(server: HttpServer): WebSocketServer {
   const clients = new Set<ConnectedClient>();
 
   realtimeBus.subscribe((event) => {
+    if (event.event === "room:kicked" && event.targetUserId) {
+      for (const target of clients) {
+        if (target.userId !== event.targetUserId || target.roomId !== event.roomId) continue;
+        send(target.socket, "room:kicked", event.data);
+        target.roomId = null;
+        if (target.socket.readyState === WebSocket.OPEN) target.socket.close(4001, "Removido da sala");
+      }
+      return;
+    }
     for (const connectedClient of clients) {
       if (event.targetUserId) {
         if (connectedClient.userId !== event.targetUserId) continue;
