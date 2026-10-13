@@ -26,6 +26,7 @@ interface User {
 
 interface Room {
   _id: string
+  inviteCode?: string
   name: string
   owner: string | User
   broadcast?: unknown
@@ -371,6 +372,8 @@ function RoomsPage() {
         )
       }
 
+      setShowJoin(false)
+
       navigate({
         to: '/rooms/$id',
 
@@ -412,36 +415,55 @@ function RoomsPage() {
   }
 
   /**
-   * Entra utilizando o ID digitado.
+   * Entra usando o código XXXX-XXXX ou um link de convite.
    */
-  async function handleJoinById() {
-    const id =
-      roomId.trim()
+  async function handleJoinByCode(input: string) {
+    const value = input.trim()
+    let candidate = value
 
-    if (!id) {
-      setError(
-        'Informe o ID da sala.'
-      )
-
+    try {
+      if (/^https?:\/\//i.test(value)) {
+        candidate = new URL(value).pathname.split('/').filter(Boolean).pop() ?? ''
+      } else if (value.includes('/')) {
+        candidate = value.split(/[/?#]/).filter(Boolean).pop() ?? ''
+      }
+    } catch {
+      setError('O link de convite é inválido.')
       return
     }
 
-    await handleJoinRoom(id, id)
+    const code = candidate.toUpperCase()
+    if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
+      setError('Código inválido. Use o formato XXXX-XXXX.')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      setError(null)
+      const lookupResponse = await fetch(
+        `${API_BASE_URL}/rooms/code/${encodeURIComponent(code)}`,
+        { credentials: 'include' }
+      )
+      const lookupResult = await lookupResponse.json()
+      if (!lookupResponse.ok || !lookupResult.success || !lookupResult.data?._id) {
+        throw new Error(lookupResult?.error?.message || 'Nenhuma sala encontrada com esse código.')
+      }
+      const room = lookupResult.data as Room
+      setSubmitting(false)
+      await handleJoinRoom(room._id, code)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível encontrar a sala pelo código.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   /**
-   * Entra usando um código ou link colado no campo do destaque.
+   * O campo do modal aceita apenas código ou link de convite, nunca o ID interno.
    */
-  async function handleJoinByCode(code: string) {
-    const id = code.trim().split('/').filter(Boolean).pop()
-
-    if (!id) {
-      setError('Informe o código ou o link da sala.')
-
-      return
-    }
-
-    await handleJoinRoom(id, id)
+  async function handleJoinById() {
+    await handleJoinByCode(roomId)
   }
 
   /**
@@ -467,13 +489,13 @@ function RoomsPage() {
         liveRoom={
           liveRoom
             ? {
-                id: liveRoom._id,
+                code: liveRoom.inviteCode ?? '',
                 name: liveRoom.name,
                 count: liveRoom.participants?.length || 0,
               }
             : null
         }
-        onJoinLive={handleJoinRoom}
+        onJoinLive={handleJoinByCode}
         disabled={submitting}
       />
 
@@ -490,7 +512,10 @@ function RoomsPage() {
         loading={loading}
         submitting={submitting}
         onRefresh={handleRefresh}
-        onJoin={handleJoinRoom}
+        onJoin={(id) => {
+          const selectedRoom = rooms.find((room) => room._id === id)
+          void handleJoinRoom(id, selectedRoom?.inviteCode)
+        }}
         onCreate={() => {
           setError(null)
           setShowCreate(true)
@@ -605,7 +630,7 @@ function RoomsPage() {
         </div>
       )}
 
-      {/* Modal entrar por ID */}
+      {/* Modal entrar por código */}
       {showJoin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
@@ -629,7 +654,7 @@ function RoomsPage() {
 
             <div className="mt-6">
               <label className="mb-1.5 block text-sm font-medium">
-                Código ou ID da sala
+                Código de convite
               </label>
 
               <input
@@ -641,7 +666,7 @@ function RoomsPage() {
                     e.target.value
                   )
                 }
-                placeholder="Cole o código ou link da sala"
+                placeholder="XXXX-XXXX ou link de convite"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
 
