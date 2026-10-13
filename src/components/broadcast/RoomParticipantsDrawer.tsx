@@ -8,6 +8,8 @@ interface RoomParticipantsDrawerProps {
     participants: Participant[];
     liveIds: string[];
     onClose: () => void;
+    canManageParticipants?: boolean;
+    onKickParticipant?: (participantId: string) => void;
 }
 
 export function RoomParticipantsDrawer({
@@ -15,6 +17,8 @@ export function RoomParticipantsDrawer({
     participants,
     liveIds,
     onClose,
+    canManageParticipants = false,
+    onKickParticipant,
 }: RoomParticipantsDrawerProps) {
     return (
         <>
@@ -32,6 +36,8 @@ export function RoomParticipantsDrawer({
                     participants={participants}
                     liveIds={liveIds}
                     onClose={onClose}
+                    canManageParticipants={canManageParticipants}
+                    onKickParticipant={onKickParticipant}
                 >
                     <RoomPanel room={room} />
                 </ParticipantsPanel>
