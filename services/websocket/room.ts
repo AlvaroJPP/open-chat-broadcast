@@ -423,61 +423,52 @@ export async function removeParticipant(
     userId: string,
     roomId: string
 ): Promise<void> {
-    const room = await roomModel.findById(roomId);
+    const roomBeforeRemoval = await roomModel.findById(roomId);
 
-    if (!room) {
+    if (!roomBeforeRemoval) {
         return;
     }
 
-    const nextParticipants = room.participants.filter(
-        (participant: RoomParticipant) =>
-            getParticipantUserId(participant.user) !== userId
+    const wasOwner = roomBeforeRemoval.owner.toString() === userId;
+
+    // A remoção atômica evita sobrescrever participantes em saídas simultâneas.
+    const removal = await roomModel.updateOne(
+        { _id: roomId, "participants.user": userId },
+        { $pull: { participants: { user: userId } } }
     );
 
-    // Não altera a sala se o participante já não estiver nela.
-    if (nextParticipants.length === room.participants.length) {
+    if (removal.modifiedCount === 0) {
         return;
     }
 
-    let nextOwner = room.owner;
-    let nextStatus = room.status;
+    const roomAfterRemoval = await roomModel.findById(roomId);
 
-    /**
-     * Se o proprietário saiu, transfere a propriedade
-     * para o participante mais antigo que permaneceu.
-     */
-    if (room.owner.toString() === userId) {
-        const sortedParticipants = [...nextParticipants].sort(
-            (a: RoomParticipant, b: RoomParticipant) =>
-                new Date(a.joinedAt).getTime() -
-                new Date(b.joinedAt).getTime()
+    if (!roomAfterRemoval) {
+        return;
+    }
+
+    if (roomAfterRemoval.participants.length === 0) {
+        await roomModel.updateOne(
+            { _id: roomId },
+            { $set: { status: "closed", participants: [] } }
         );
-
-        const nextOwnerCandidate = sortedParticipants[0];
-
-        if (nextOwnerCandidate) {
-            nextOwner = nextOwnerCandidate.user;
-        } else {
-            nextStatus = "closed";
-        }
+        console.log(`[ROOM] Sala ${roomId} encerrada: não há participantes.`);
+        return;
     }
 
-    if (nextParticipants.length === 0) {
-        nextStatus = "closed";
-    }
+    if (wasOwner) {
+        const oldestParticipant = [...roomAfterRemoval.participants].sort(
+            (a: RoomParticipant, b: RoomParticipant) =>
+                new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
+        )[0];
 
-    await roomModel.findByIdAndUpdate(
-        roomId,
-        {
-            participants: nextParticipants,
-            owner: nextOwner,
-            status: nextStatus,
-        },
-        {
-            new: true,
-            runValidators: true,
+        if (oldestParticipant) {
+            await roomModel.updateOne(
+                { _id: roomId },
+                { $set: { owner: oldestParticipant.user, status: "active" } }
+            );
         }
-    );
+    }
 }
 
 
