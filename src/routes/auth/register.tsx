@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Cast } from 'lucide-react'
+import { API_BASE_URL } from '@/lib/config'
 import { useState, type FormEvent } from 'react'
 
 export const Route = createFileRoute('/auth/register')({
@@ -32,7 +33,7 @@ function RouteComponent() {
 
     setIsSubmitting(true)
     try {
-      const response = await fetch('/api/users/', {
+      const response = await fetch(`${API_BASE_URL}/users/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
