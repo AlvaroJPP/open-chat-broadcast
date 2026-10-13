@@ -8,7 +8,6 @@ const mediaController = {
     async create(req: Request, res: Response) {
         try {
             const {
-                user,
                 room,
                 message,
                 type,
@@ -21,6 +20,7 @@ const mediaController = {
                 duration,
                 resolution
             } = req.body;
+            const user = res.locals.authUserId as string;
 
             if (
                 !user ||
@@ -146,6 +146,16 @@ const mediaController = {
                     error: {
                         status: 404,
                         message: "Mídia não encontrada."
+                    }
+                });
+            }
+
+            if (media.user.toString() !== String(res.locals.authUserId)) {
+                return res.status(403).json({
+                    success: false,
+                    error: {
+                        status: 403,
+                        message: "Você não tem permissão para excluir esta mídia."
                     }
                 });
             }
