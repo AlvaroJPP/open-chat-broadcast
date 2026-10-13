@@ -8,7 +8,11 @@
   },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/auth/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/rooms/(.*)",
       "destination": "/index.html"
     }
   ]
