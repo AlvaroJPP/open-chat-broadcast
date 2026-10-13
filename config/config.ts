@@ -3,7 +3,8 @@ import dns from "node:dns"
 const PORT = Number(process.env["PORT"]) || 3000
 const HOST = process.env["HOST"] || "0.0.0.0"
 const MONGODB_URI =
-  process.env["MONGODB_URI"] || "mongodb://127.0.0.1:27017/app"
+  process.env["MONGODB_URI"] ||
+  (process.env["VERCEL"] ? "" : "mongodb://127.0.0.1:27017/app")
 
 const FRONTEND_URL =
   process.env["FRONTEND_URL"]?.trim() ||
