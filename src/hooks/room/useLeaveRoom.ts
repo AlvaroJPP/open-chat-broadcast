@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { API_BASE_URL } from "@/lib/config";
 
 interface UseLeaveRoomProps {
     roomId: string;
@@ -24,7 +25,7 @@ export function useLeaveRoom({
             stopAllMedia();
 
             const response = await fetch(
-                `/api/rooms/${roomId}/leave`,
+                `${API_BASE_URL}/rooms/${roomId}/leave`,
                 {
                     method: "POST",
                     headers: {
