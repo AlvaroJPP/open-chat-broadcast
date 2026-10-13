@@ -10,6 +10,7 @@ import { RoomsTopNav } from '../../components/rooms/RoomsTopNav'
 import { RoomsHero } from '../../components/rooms/RoomsHero'
 import { RoomsList } from '../../components/rooms/RoomsList'
 import { BroadcastWebSocket } from '../../lib/websocket'
+import { API_BASE_URL } from '../../lib/config'
 
 export const Route = createFileRoute('/rooms/')({
   component: RoomsPage,
@@ -99,7 +100,7 @@ function RoomsPage() {
       setError(null)
 
       const response =
-        await fetch('/api/rooms', {
+        await fetch(`${API_BASE_URL}/rooms`, {
           credentials: 'include',
         })
 
@@ -247,7 +248,7 @@ function RoomsPage() {
       setError(null)
 
       const response =
-        await fetch('/api/rooms', {
+        await fetch(`${API_BASE_URL}/rooms`, {
           method: 'POST',
 
           headers: {
@@ -334,7 +335,7 @@ function RoomsPage() {
 
       const response =
         await fetch(
-          `/api/rooms/${id}/join`,
+          `${API_BASE_URL}/rooms/${id}/join`,
           {
             method: 'POST',
 
