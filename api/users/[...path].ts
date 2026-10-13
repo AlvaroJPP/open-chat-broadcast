@@ -2,8 +2,8 @@ import type { Request, Response } from "express";
 import app from "../../config/app.ts";
 
 /**
- * Encaminha explicitamente /api/users/* para o roteador Express.
- * A normalização cobre os formatos de URL usados pelo runtime da Vercel.
+ * Rota explícita para os endpoints de usuários na Vercel.
+ * Aceita tanto a URL completa quanto o sufixo entregue pelo runtime.
  */
 export default function handler(req: Request, res: Response) {
   const requestUrl = req.url ?? "/";
@@ -11,21 +11,24 @@ export default function handler(req: Request, res: Response) {
   const pathname = queryIndex === -1 ? requestUrl : requestUrl.slice(0, queryIndex);
   const query = queryIndex === -1 ? "" : requestUrl.slice(queryIndex);
 
-  let normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  let path = pathname.startsWith("/") ? pathname : `/${pathname}`;
 
-  while (normalizedPath === "/api/api" || normalizedPath.startsWith("/api/api/")) {
-    normalizedPath = normalizedPath.slice(4);
+  while (path === "/api/api" || path.startsWith("/api/api/")) {
+    path = path.slice(4);
   }
 
-  if (normalizedPath !== "/api" && !normalizedPath.startsWith("/api/")) {
-    normalizedPath = `/api${normalizedPath}`;
-  }
+  let normalizedPath: string;
 
-  // Se a Vercel passar somente o sufixo da rota, restaura /api/users.
-  if (normalizedPath === "/api" || normalizedPath === "/api/") {
+  if (path === "/api/users" || path.startsWith("/api/users/")) {
+    normalizedPath = path;
+  } else if (path === "/users" || path.startsWith("/users/")) {
+    normalizedPath = `/api${path}`;
+  } else if (path === "/api") {
     normalizedPath = "/api/users";
-  } else if (!normalizedPath.startsWith("/api/users/") && normalizedPath !== "/api/users") {
-    normalizedPath = `/api/users${normalizedPath.startsWith("/") ? normalizedPath : `/${normalizedPath}`}`;
+  } else if (path.startsWith("/api/")) {
+    normalizedPath = `/api/users/${path.slice(5)}`;
+  } else {
+    normalizedPath = path === "/" ? "/api/users" : `/api/users${path}`;
   }
 
   req.url = `${normalizedPath}${query}`;
