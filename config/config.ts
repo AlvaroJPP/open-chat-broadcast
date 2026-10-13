@@ -8,13 +8,7 @@ const HOST = process.env["HOST"] || "0.0.0.0"
 const MONGODB_URI = process.env["MONGODB_URI"] || "mongodb://127.0.0.1:27017/app"
 
 const defaultAllowedOrigins = [
-  "http://localhost:5173",
-  "https://localhost:5173",
-  "http://localhost:5175",
   "https://localhost:5175",
-  "https://192.168.1.101:5173",
-  "https://192.168.1.101:5175",
-  "http://192.168.1.101:5173",
   "http://192.168.1.101:5175",
 ]
 
