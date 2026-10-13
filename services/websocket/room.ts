@@ -473,6 +473,45 @@ export async function removeParticipant(
     );
 }
 
+
+/** Expulsa um participante e valida no servidor se o solicitante é o proprietário. */
+export async function kickParticipant(
+    client: ConnectedClient,
+    data: RoomJoinData,
+    clients: Set<ConnectedClient>
+): Promise<void> {
+    const fail = (message: string) => send(client.socket, "room:kick:error", { message });
+    if (!data?.room || !data?.user) return fail("Sala e participante são obrigatórios.");
+    if (client.roomId !== data.room || !client.userId) return fail("Você não está conectado a esta sala.");
+    const room = await roomModel.findById(data.room);
+    if (!room) return fail("Sala não encontrada.");
+    if (room.owner.toString() !== client.userId) return fail("Somente o proprietário pode remover participantes.");
+    if (data.user === room.owner.toString()) return fail("O proprietário não pode remover a si mesmo.");
+    const isParticipant = room.participants.some((p: RoomParticipant) => getParticipantUserId(p.user) === data.user);
+    if (!isParticipant) return fail("Esse usuário não está mais na sala.");
+    await removeParticipant(data.user, data.room);
+    for (const target of clients) {
+        if (target.userId !== data.user || target.roomId !== data.room) continue;
+        send(target.socket, "room:kicked", { room: data.room, user: data.user, message: "Você foi removido desta sala pelo proprietário." });
+        target.roomId = null;
+        if (target.socket.readyState === WebSocket.OPEN) target.socket.close(4001, "Removido da sala");
+    }
+    for (const other of clients) {
+        if (other.roomId === data.room) send(other.socket, "participant:leave", { room: data.room, user: data.user, reason: "kicked" });
+    }
+    void realtimeBus.publish({
+        event: "participant:leave", data: { room: data.room, user: data.user, reason: "kicked" }, roomId: data.room,
+    }).catch((error: unknown) => console.error("[REALTIME BUS] Falha ao publicar expulsão:", error));
+    void realtimeBus.publish({
+        event: "room:kicked",
+        data: { room: data.room, user: data.user, message: "Você foi removido desta sala pelo proprietário." },
+        roomId: data.room, targetUserId: data.user,
+    }).catch((error: unknown) => console.error("[REALTIME BUS] Falha ao notificar usuário expulso:", error));
+    await broadcastRoomParticipants(data.room, clients);
+    send(client.socket, "room:kick:success", { room: data.room, user: data.user, message: "Participante removido da sala." });
+    console.log(`[WEBSOCKET] Proprietário ${client.userId} removeu ${data.user} da sala ${data.room}.`);
+}
+
 /**
  * Remove um participante que ficou offline por 2 minutos.
  */
