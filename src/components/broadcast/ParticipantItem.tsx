@@ -21,9 +21,12 @@ interface ParticipantItemProps {
     live?: boolean;
     canKick?: boolean;
     onKick?: (participantId: string) => void;
+    canManage?: boolean;
+    onTransferOwnership?: (participantId: string) => void;
+    onToggleMute?: (participantId: string, muted: boolean) => void;
 }
 
-export function ParticipantItem({ participant, live = false, canKick = false, onKick }: ParticipantItemProps) {
+export function ParticipantItem({ participant, live = false, canKick = false, onKick, canManage = false, onTransferOwnership, onToggleMute }: ParticipantItemProps) {
     return (
         <div className="flex h-[60px] items-center gap-3 border-b border-border">
             <div className="relative shrink-0">
@@ -76,7 +79,16 @@ export function ParticipantItem({ participant, live = false, canKick = false, on
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                         <DropdownMenuItem>Ver perfil</DropdownMenuItem>
-                        {!participant.isYou && <DropdownMenuItem>Silenciar</DropdownMenuItem>}
+                        {canManage && !participant.isYou && (
+                            <>
+                                <DropdownMenuItem onSelect={() => onToggleMute?.(participant.id, !participant.micMuted)}>
+                                    {participant.micMuted ? "Permitir microfone" : "Silenciar microfone"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onTransferOwnership?.(participant.id)}>
+                                    Tornar proprietário
+                                </DropdownMenuItem>
+                            </>
+                        )}
                         {canKick && !participant.isYou && (
                             <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
