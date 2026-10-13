@@ -22,12 +22,11 @@ export function useLeaveRoom({
         setIsLeaving(true);
 
         try {
-            stopAllMedia();
-
             const response = await fetch(
                 `${API_BASE_URL}/rooms/${roomId}/leave`,
                 {
                     method: "POST",
+                    credentials: "include",
                     headers: {
                         "Content-Type": "application/json",
                     },
@@ -48,6 +47,8 @@ export function useLeaveRoom({
                 );
             }
 
+            stopAllMedia();
+
             await navigate({ to: "/rooms" });
         } catch (error) {
             console.error(
@@ -55,8 +56,6 @@ export function useLeaveRoom({
                 error,
             );
 
-            // Mantém o comportamento anterior:
-            // não deixar o usuário preso na sala.
             await navigate({ to: "/rooms" });
         } finally {
             setIsLeaving(false);
