@@ -77,8 +77,13 @@ const roomController = {
     // Listar todas as salas
     async findAll(req: Request, res: Response) {
         try {
-            const rooms =
-                await roomModel.find();
+            const userId = String(res.locals.authUserId);
+            const rooms = await roomModel.find({
+                $or: [
+                    { owner: userId },
+                    { "participants.user": userId }
+                ]
+            });
 
             return res.status(200).json({
                 success: true,
