@@ -419,26 +419,12 @@ function RoomsPage() {
   }
 
   /**
-   * Entra usando o código XXXX-XXXX ou um link de convite.
+   * Entra usando somente o código XXXX-XXXX.
    */
   async function handleJoinByCode(input: string) {
-    const value = input.trim()
-    let candidate = value
-
-    try {
-      if (/^https?:\/\//i.test(value)) {
-        candidate = new URL(value).pathname.split('/').filter(Boolean).pop() ?? ''
-      } else if (value.includes('/')) {
-        candidate = value.split(/[/?#]/).filter(Boolean).pop() ?? ''
-      }
-    } catch {
-      setError('O link de convite é inválido.')
-      return
-    }
-
-    const code = candidate.toUpperCase()
+    const code = input.trim().toUpperCase()
     if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
-      setError('Código inválido. Use o formato XXXX-XXXX.')
+      setError('Código inválido. Digite no formato XXXX-XXXX.')
       return
     }
 
@@ -674,7 +660,7 @@ function RoomsPage() {
                     e.target.value
                   )
                 }
-                placeholder="XXXX-XXXX ou link de convite"
+                placeholder="XXXX-XXXX"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
 
