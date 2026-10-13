@@ -205,6 +205,7 @@ function RoomPage() {
                     `${API_BASE_URL}/rooms/${id}/join`,
                     {
                         method: "POST",
+                        credentials: "include",
                         headers: {
                             "Content-Type":
                                 "application/json",
@@ -234,7 +235,8 @@ function RoomPage() {
 
             const roomResponse =
                 await fetch(
-                    `${API_BASE_URL}/rooms/${id}`
+                    `${API_BASE_URL}/rooms/${id}`,
+                    { credentials: "include" }
                 );
 
             if (!roomResponse.ok) {
@@ -284,7 +286,8 @@ function RoomPage() {
 
             const messagesResponse =
                 await fetch(
-                    `${API_BASE_URL}/rooms/${id}/messages`
+                    `${API_BASE_URL}/rooms/${id}/messages`,
+                    { credentials: "include" }
                 );
 
             if (!messagesResponse.ok) {
