@@ -1,8 +1,8 @@
-
 import { Server as HttpServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 
 import userModel from "../../models/user_model.ts";
+import mongodb from "../../config/mongodb.ts";
 
 import {
   ConnectedClient,
@@ -50,15 +50,16 @@ async function handleMessage(
   ) => void,
 ): Promise<void> {
   try {
+    // WebSocket upgrades do not pass through the Express HTTP middleware.
+    await mongodb.connect();
+
     const payload = JSON.parse(message);
 
     switch (payload.event) {
       case "room:join": {
         const data = payload.data;
-
         await joinRoom(client, data, clients);
 
-        // Só cancela se a entrada na sala foi validada.
         if (
           data?.user &&
           data?.room &&
@@ -67,79 +68,61 @@ async function handleMessage(
         ) {
           cancelOfflineTimer(data.user, data.room);
         }
-
         break;
       }
 
       case "room:leave": {
         const data = payload.data;
-
         await leaveRoom(client, data, clients);
 
         if (data?.user && data?.room) {
           cancelOfflineTimer(data.user, data.room);
         }
-
         break;
       }
 
       case "message:send":
         await sendMessage(client, payload.data, clients);
         break;
-
       case "typing:start":
         await startTyping(client, payload.data, clients);
         break;
-
       case "typing:stop":
         await stopTyping(client, payload.data, clients);
         break;
-
       case "broadcast:start":
         await startBroadcast(client, payload.data, clients);
         break;
-
       case "broadcast:end":
         await endBroadcast(client, payload.data, clients);
         break;
-
       case "screen:start":
         await startScreen(client, payload.data, clients);
         break;
-
       case "screen:stop":
         await stopScreen(client, payload.data, clients);
         break;
-
       case "media:state":
         relayMediaState(client, payload.data, clients);
         break;
-
       case "webrtc:offer":
         await sendOffer(client, payload.data, clients);
         break;
-
       case "webrtc:answer":
         await sendAnswer(client, payload.data, clients);
         break;
-
       case "webrtc:ice:candidate":
         await sendIceCandidate(client, payload.data, clients);
         break;
-
       default:
         send(client.socket, "error", {
           message: "Evento não reconhecido.",
         });
     }
   } catch (error) {
-    console.error(
-      "[WEBSOCKET] Erro ao processar mensagem:",
-      error,
-    );
-
+    console.error("[WEBSOCKET] Erro ao processar mensagem:", error);
     send(client.socket, "error", {
-      message: "Mensagem WebSocket inválida.",
+      message: "Mensagem WebSocket inválida ou banco indisponível.",
     });
   }
 }
@@ -147,99 +130,56 @@ async function handleMessage(
 function start(server: HttpServer): WebSocketServer {
   const websocketServer = new WebSocketServer({
     server,
-    path: "/ws",
+    path: process.env["VERCEL"] ? "/api/ws" : "/ws",
   });
 
   const clients = new Set<ConnectedClient>();
+  const OFFLINE_TIMEOUT_MS = Number(process.env["OFFLINE_TIMEOUT_MS"]) || 120_000;
 
-  // Tempo máximo offline antes de remover o participante.
-  const OFFLINE_TIMEOUT_MS = 60_000;
+  const offlineTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  const offlineTimers = new Map<
-    string,
-    ReturnType<typeof setTimeout>
-  >();
-
-  // Identifica unicamente a combinação usuário + sala.
-  function getOfflineTimerKey(
-    userId: string,
-    roomId: string,
-  ): string {
+  function getOfflineTimerKey(userId: string, roomId: string): string {
     return `${userId}:${roomId}`;
   }
 
-  function cancelOfflineTimer(
-    userId: string,
-    roomId: string,
-  ): void {
+  function cancelOfflineTimer(userId: string, roomId: string): void {
     const key = getOfflineTimerKey(userId, roomId);
     const timer = offlineTimers.get(key);
 
     if (timer) {
       clearTimeout(timer);
       offlineTimers.delete(key);
-
-      console.log(
-        `[WEBSOCKET] Temporizador cancelado para ${userId} na sala ${roomId}.`,
-      );
+      console.log(`[WEBSOCKET] Temporizador cancelado para ${userId} na sala ${roomId}.`);
     }
   }
 
-  function scheduleOfflineRemoval(
-    userId: string,
-    roomId: string,
-  ): void {
+  function scheduleOfflineRemoval(userId: string, roomId: string): void {
     const key = getOfflineTimerKey(userId, roomId);
-
-    // Evita temporizadores duplicados.
     cancelOfflineTimer(userId, roomId);
 
     const timer = setTimeout(async () => {
-      // Confirma que este ainda é o temporizador vigente.
-      if (offlineTimers.get(key) !== timer) {
-        return;
-      }
-
+      if (offlineTimers.get(key) !== timer) return;
       offlineTimers.delete(key);
 
       try {
-        await removeOfflineParticipant(
-          userId,
-          roomId,
-          clients,
-        );
+        await mongodb.connect();
+        await removeOfflineParticipant(userId, roomId, clients);
       } catch (error) {
-        console.error(
-          `[WEBSOCKET] Erro ao remover ${userId} da sala ${roomId}:`,
-          error,
-        );
+        console.error(`[WEBSOCKET] Erro ao remover ${userId} da sala ${roomId}:`, error);
       }
     }, OFFLINE_TIMEOUT_MS);
 
     offlineTimers.set(key, timer);
-
-    console.log(
-      `[WEBSOCKET] Remoção agendada para ${userId} na sala ${roomId}, em 120 segundos.`,
-    );
+    console.log(`[WEBSOCKET] Remoção agendada para ${userId} na sala ${roomId}, em ${OFFLINE_TIMEOUT_MS / 1000} segundos.`);
   }
 
-  /*
-   * Heartbeat único para todos os clientes.
-   * Detecta conexões que deixam de responder.
-   */
   const heartbeatInterval = setInterval(() => {
     for (const client of clients) {
       const socket = client.socket as HeartbeatSocket;
-
-      if (socket.readyState !== WebSocket.OPEN) {
-        continue;
-      }
+      if (socket.readyState !== WebSocket.OPEN) continue;
 
       if (socket.isAlive === false) {
-        console.warn(
-          "[WEBSOCKET] Cliente sem resposta ao heartbeat; encerrando conexão.",
-        );
-
+        console.warn("[WEBSOCKET] Cliente sem resposta ao heartbeat; encerrando conexão.");
         socket.terminate();
         continue;
       }
@@ -251,123 +191,73 @@ function start(server: HttpServer): WebSocketServer {
 
   websocketServer.on("close", () => {
     clearInterval(heartbeatInterval);
-
-    for (const timer of offlineTimers.values()) {
-      clearTimeout(timer);
-    }
-
+    for (const timer of offlineTimers.values()) clearTimeout(timer);
     offlineTimers.clear();
   });
 
   websocketServer.on("connection", (socket: WebSocket) => {
     const heartbeatSocket = socket as HeartbeatSocket;
-
     heartbeatSocket.isAlive = true;
-
     socket.on("pong", () => {
       heartbeatSocket.isAlive = true;
     });
 
-    const client: ConnectedClient = {
-      socket,
-      userId: null,
-      roomId: null,
-    };
-
+    const client: ConnectedClient = { socket, userId: null, roomId: null };
     clients.add(client);
 
-    console.log(
-      `[WEBSOCKET] Cliente conectado. Clientes: ${clients.size}`,
-    );
-
-    send(socket, "connected", {
-      message: "Conexão WebSocket estabelecida.",
-    });
+    console.log(`[WEBSOCKET] Cliente conectado. Clientes: ${clients.size}`);
+    send(socket, "connected", { message: "Conexão WebSocket estabelecida." });
 
     let messageQueue: Promise<void> = Promise.resolve();
 
     socket.on("message", (message) => {
-      const text = message.toString();
-
-      // Preserva o processamento sequencial das mensagens.
       messageQueue = messageQueue
-        .then(() =>
-          handleMessage(
-            client,
-            text,
-            clients,
-            cancelOfflineTimer,
-          ),
-        )
+        .then(() => handleMessage(client, message.toString(), clients, cancelOfflineTimer))
         .catch((error) => {
-          console.error(
-            "[WEBSOCKET] Erro na fila de mensagens:",
-            error,
-          );
+          console.error("[WEBSOCKET] Erro na fila de mensagens:", error);
         });
     });
 
     socket.on("close", async () => {
       const userId = client.userId;
       const roomId = client.roomId;
-
-      // Remove somente a conexão que foi encerrada.
       clients.delete(client);
 
       const stillConnected = userId
-        ? [...clients].some(
-            (other) =>
-              other.userId === userId &&
-              other.socket.readyState === WebSocket.OPEN,
+        ? [...clients].some((other) =>
+            other.userId === userId && other.socket.readyState === WebSocket.OPEN
           )
         : false;
 
-      const stillInRoom =
-        userId && roomId
-          ? [...clients].some(
-              (other) =>
-                other.userId === userId &&
-                other.roomId === roomId &&
-                other.socket.readyState === WebSocket.OPEN,
-            )
-          : false;
+      const stillInRoom = userId && roomId
+        ? [...clients].some((other) =>
+            other.userId === userId &&
+            other.roomId === roomId &&
+            other.socket.readyState === WebSocket.OPEN
+          )
+        : false;
 
-      // Só marca offline quando nenhuma conexão permanece ativa.
       if (userId && !stillConnected) {
         try {
-          await userModel.findByIdAndUpdate(userId, {
-            status: "offline",
-          });
+          await mongodb.connect();
+          await userModel.findByIdAndUpdate(userId, { status: "offline" });
         } catch (error) {
-          console.error(
-            `[WEBSOCKET] Erro ao atualizar status offline do usuário ${userId}:`,
-            error,
-          );
+          console.error(`[WEBSOCKET] Erro ao atualizar status offline do usuário ${userId}:`, error);
         }
       }
 
       if (userId && roomId && !stillInRoom) {
-        // Não remove do banco imediatamente.
         scheduleOfflineRemoval(userId, roomId);
-
-        // Atualiza a presença sem remover o participante.
         try {
+          await mongodb.connect();
           await broadcastRoomParticipants(roomId, clients);
         } catch (error) {
-          console.error(
-            `[WEBSOCKET] Erro ao atualizar participantes da sala ${roomId}:`,
-            error,
-          );
+          console.error(`[WEBSOCKET] Erro ao atualizar participantes da sala ${roomId}:`, error);
         }
-
-        console.log(
-          `[WEBSOCKET] Usuário ${userId} offline na sala ${roomId}. Prazo: 120 segundos.`,
-        );
+        console.log(`[WEBSOCKET] Usuário ${userId} offline na sala ${roomId}. Prazo: ${OFFLINE_TIMEOUT_MS / 1000} segundos.`);
       }
 
-      console.log(
-        `[WEBSOCKET] Cliente desconectado. Clientes: ${clients.size}`,
-      );
+      console.log(`[WEBSOCKET] Cliente desconectado. Clientes: ${clients.size}`);
     });
 
     socket.on("error", (error) => {
@@ -375,11 +265,8 @@ function start(server: HttpServer): WebSocketServer {
     });
   });
 
-  console.log("[WEBSOCKET] WebSocket iniciado em /ws");
-
+  console.log(`[WEBSOCKET] WebSocket iniciado em ${process.env["VERCEL"] ? "/api/ws" : "/ws"}`);
   return websocketServer;
 }
 
-export default {
-  start,
-};
+export default { start };
