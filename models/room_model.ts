@@ -10,6 +10,13 @@ const roomSchema = new mongoose.Schema(
             maxlength: 100 // Máximo de 100 caracteres
         },
 
+        visibility: {
+            type: String,
+            enum: ["public", "private"],
+            default: "public",
+            index: true
+        },
+
         broadcast: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Broadcast",
