@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import { authenticateUser, AppError } from "../services/user_service.ts";
 
 const TAG = "[AUTH]";
