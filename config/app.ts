@@ -13,8 +13,17 @@ import mediaRouter from "../routers/media_router.ts";
 
 const app = express();
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.disable("x-powered-by");
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self)");
+  if (process.env["NODE_ENV"] === "production") res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  next();
+});
+app.use(express.json({ limit: "256kb" }));
+app.use(express.urlencoded({ extended: true, limit: "64kb", parameterLimit: 100 }));
 
 const allowedOrigins = config.http.allowedOrigins ?? [];
 
@@ -24,7 +33,7 @@ const lanOrigin =
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin) || lanOrigin.test(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || (process.env["NODE_ENV"] !== "production" && lanOrigin.test(origin))) {
         return callback(null, true);
       }
 
@@ -33,6 +42,26 @@ app.use(
     credentials: true,
   }),
 );
+
+const requestBuckets = new Map<string, { count: number; resetAt: number }>();
+app.use((req, res, next) => {
+  const now = Date.now();
+  const key = req.ip || req.socket.remoteAddress || "unknown";
+  let bucket = requestBuckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    bucket = { count: 0, resetAt: now + 60_000 };
+    requestBuckets.set(key, bucket);
+  }
+  bucket.count += 1;
+  if (bucket.count > 180) {
+    res.setHeader("Retry-After", "60");
+    return res.status(429).json({ success: false, error: { status: 429, message: "Muitas solicitações. Aguarde um minuto e tente novamente." } });
+  }
+  if (requestBuckets.size > 5000) {
+    for (const [bucketKey, value] of requestBuckets) if (value.resetAt <= now) requestBuckets.delete(bucketKey);
+  }
+  next();
+});
 
 app.use(http.ipFilter);
 
