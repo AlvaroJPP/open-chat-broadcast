@@ -8,7 +8,7 @@ const MONGODB_URI =
 
 const FRONTEND_URL =
   process.env["FRONTEND_URL"]?.trim() ||
-  "https://open-chat-broadcast-kappa.vercel.app"
+  "https://open-chat-broadcast-ajpp.vercel.app"
 
 const allowedOrigins = process.env["ALLOWED_ORIGINS"]
   ? process.env["ALLOWED_ORIGINS"]
