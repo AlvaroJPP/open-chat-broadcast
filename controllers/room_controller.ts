@@ -148,11 +148,14 @@ const roomController = {
             }
 
             const userId = String(res.locals.authUserId);
+            const roomOwnerId = String(
+                (room.owner as any)?._id ?? room.owner
+            );
             const canViewPrivateRoom =
                 room.visibility !== "private" ||
-                room.owner.toString() === userId ||
-                room.participants.some((participant: RoomParticipant) =>
-                    participant.user.toString() === userId
+                roomOwnerId === userId ||
+                room.participants.some((participant: any) =>
+                    String(participant.user?._id ?? participant.user) === userId
                 );
 
             if (!canViewPrivateRoom) {
