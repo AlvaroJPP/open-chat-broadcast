@@ -68,7 +68,7 @@ function JoinRoomByCodePage() {
                     joinResponse.status === 409 &&
                     joinResult?.error?.message === "Usuário já está na sala.";
 
-                if (!joinResponse.ok && !alreadyJoined) {
+                if ((!joinResponse.ok || !joinResult?.success) && !alreadyJoined) {
                     throw new Error(
                         joinResult?.error?.message ?? "Não foi possível entrar na sala."
                     );
