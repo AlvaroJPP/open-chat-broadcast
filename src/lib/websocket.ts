@@ -33,20 +33,25 @@ export class BroadcastWebSocket {
     const configuredWsUrl = import.meta.env["VITE_WS_URL"]?.trim()
     const apiUrl = import.meta.env["VITE_API_URL"]?.trim()
 
-    // VITE_API_URL pode ser a origem local (…:3000) ou a URL da API
-    // na Vercel (https://seu-site.vercel.app/api). Nesse segundo caso,
-    // o endpoint WebSocket fica em /api/ws.
+    // Na Vercel, o endpoint é /api/ws. No servidor local ou em um
+    // backend separado, o endpoint padrão continua sendo /ws.
     const configuredBase = configuredWsUrl || apiUrl || window.location.origin
     const websocketBaseUrl = configuredBase
       .replace(/^https:/i, "wss:")
       .replace(/^http:/i, "ws:")
       .replace(/\/+$/, "")
 
+    const isVercelFrontend = !configuredWsUrl && !apiUrl && !import.meta.env.DEV
+    const apiBaseConfigured = !configuredWsUrl && /\/api$/i.test(websocketBaseUrl)
     const socketUrl = configuredWsUrl
       ? websocketBaseUrl
-      : `${websocketBaseUrl}/ws`
+      : apiBaseConfigured
+        ? `${websocketBaseUrl}/ws`
+        : isVercelFrontend
+          ? `${websocketBaseUrl}/api/ws`
+          : `${websocketBaseUrl}/ws`
 
-    if (configuredWsUrl && !/\/ws(?:\?.*)?$/i.test(socketUrl)) {
+    if (configuredWsUrl && !/\/(?:api\/)?ws(?:\?.*)?$/i.test(socketUrl)) {
       throw new Error("VITE_WS_URL deve terminar em /ws ou /api/ws.")
     }
 
