@@ -37,6 +37,7 @@ type ApiRoom = {
     participants: ApiParticipant[];
 
     status: "waiting" | "active" | "closed";
+    inviteCode?: string;
 };
 
 type ApiMessage = {
@@ -212,8 +213,6 @@ function RoomPage() {
                         },
                         body: JSON.stringify({
                             user: currentUserId,
-                            // O ID da sala também funciona como código de convite.
-                            code: id,
                         }),
                     }
                 );
@@ -273,7 +272,7 @@ function RoomPage() {
                     data.status === "active",
 
                 inviteUrl:
-                    `${window.location.origin}/rooms/${data._id}`,
+                    `${window.location.origin}/rooms/join/${data.inviteCode ?? ""}`,
             };
 
             const roomParticipants =
