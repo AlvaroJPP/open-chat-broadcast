@@ -41,6 +41,7 @@ export function useWebRTC({ userId, roomId }: UseWebRTCOptions) {
     // Referências das mídias locais
     const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
     const micTrackRef = useRef<MediaStreamTrack | null>(null);
+    const mutedByOwnerRef = useRef(false);
     const screenStreamRef = useRef<MediaStream | null>(null);
 
     // Gerenciamento de áudio
@@ -252,6 +253,7 @@ export function useWebRTC({ userId, roomId }: UseWebRTCOptions) {
         sendMediaState,
         setLastError,
         stopMic,
+        mutedByOwnerRef,
         setSharingUsers,
         setMediaStates,
     });
@@ -282,6 +284,14 @@ export function useWebRTC({ userId, roomId }: UseWebRTCOptions) {
         setPeerStates,
     });
 
+    const startMicUnlessMuted = useCallback(() => {
+        if (mutedByOwnerRef.current) {
+            window.alert("Seu microfone está bloqueado pelo proprietário da sala.");
+            return;
+        }
+        return startMic();
+    }, [startMic]);
+
     // API pública do hook
     return {
         connected,
@@ -298,7 +308,7 @@ export function useWebRTC({ userId, roomId }: UseWebRTCOptions) {
         setStreamQuality,
         startCamera,
         stopCamera,
-        startMic,
+        startMic: startMicUnlessMuted,
         stopMic,
         startScreenShare,
         stopScreenShare,
