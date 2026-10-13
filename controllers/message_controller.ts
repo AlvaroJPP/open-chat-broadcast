@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
-import messageModel from "../models/message_model.js";
-import roomModel from "../models/room_model.js";
+import messageModel from "../models/message_model.ts";
+import roomModel from "../models/room_model.ts";
 
 
 type RoomParticipant = {
