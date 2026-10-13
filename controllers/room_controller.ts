@@ -90,7 +90,7 @@ const roomController = {
             const userId = String(res.locals.authUserId);
             const rooms = await roomModel.find({
                 $or: [
-                    { visibility: "public" },
+                    { visibility: { $ne: "private" } },
                     { owner: userId },
                     { "participants.user": userId }
                 ]
