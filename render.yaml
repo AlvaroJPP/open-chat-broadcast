@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: open-chat-broadcast-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run cli:server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: MONGODB_URI
+        sync: false
+      - key: FRONTEND_URL
+        value: https://open-chat-broadcast-kappa.vercel.app
+      - key: ALLOWED_ORIGINS
+        value: https://open-chat-broadcast-kappa.vercel.app
+      - key: OFFLINE_TIMEOUT_MS
+        value: "120000"
