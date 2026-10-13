@@ -362,9 +362,13 @@ function RoomsPage() {
       const result =
         await response.json()
 
+      const alreadyJoined =
+        response.status === 409 &&
+        result?.error?.message === 'Usuário já está na sala.'
+
       if (
-        !response.ok ||
-        !result.success
+        (!response.ok || !result.success) &&
+        !alreadyJoined
       ) {
         throw new Error(
           result?.error?.message ||
