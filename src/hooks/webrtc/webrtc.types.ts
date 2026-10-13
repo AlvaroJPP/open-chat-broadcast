@@ -44,4 +44,5 @@ export type ParticipantPayload = {
     user?: string | WebRTCUser;
     id?: string;
     online?: boolean;
+    muted?: boolean;
 };
