@@ -3,6 +3,7 @@ import { WebSocket } from "ws";
 import roomModel from "../../models/room_model.ts";
 
 import type { ConnectedClient } from "./room.ts";
+import realtimeBus from "./realtime_bus.js";
 
 type ScreenData = {
     user: string;
@@ -81,6 +82,8 @@ export async function startScreen(
         "screen:start"
     );
 
+    await realtimeBus.publish({ event: "screen:start", data: { user: data.user, room: data.room }, roomId: data.room });
+
     console.log(
         `[WEBSOCKET] Usuário ${data.user} iniciou compartilhamento de tela na sala ${data.room}.`
     );
@@ -126,6 +129,8 @@ export async function stopScreen(
         clients,
         "screen:stop"
     );
+
+    await realtimeBus.publish({ event: "screen:stop", data: { user: data.user, room: data.room }, roomId: data.room });
 
     console.log(
         `[WEBSOCKET] Usuário ${data.user} encerrou compartilhamento de tela na sala ${data.room}.`
