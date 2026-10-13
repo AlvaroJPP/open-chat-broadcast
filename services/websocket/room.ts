@@ -398,6 +398,14 @@ function broadcastParticipant(
             room: data.room,
         });
     }
+
+    void realtimeBus.publish({
+        event,
+        data: { user: user ?? data.user, room: data.room },
+        roomId: data.room,
+    }).catch((error: unknown) => {
+        console.error("[REALTIME BUS] Falha ao publicar evento de participante:", error);
+    });
 }
 
 /**
