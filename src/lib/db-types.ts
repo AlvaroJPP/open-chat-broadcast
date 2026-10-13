@@ -14,6 +14,7 @@ export interface User {
 }
 
 export type RoomStatus = "waiting" | "active" | "closed";
+export type RoomVisibility = "public" | "private";
 
 export interface RoomParticipant {
     user: string; // User._id
@@ -27,6 +28,7 @@ export interface Room {
     owner: string; // User._id
     participants: RoomParticipant[];
     maxParticipants: number;
+    visibility: RoomVisibility;
     status: RoomStatus;
     createdAt: string;
     updatedAt: string;
