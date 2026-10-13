@@ -272,7 +272,7 @@ function RoomPage() {
                     data.status === "active",
 
                 inviteUrl:
-                    `${window.location.origin}/rooms/join/${data.inviteCode ?? ""}`,
+                    data.inviteCode ?? "",
             };
 
             const roomParticipants =
