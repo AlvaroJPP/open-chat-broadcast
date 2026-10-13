@@ -20,10 +20,10 @@ const roomController = {
         try {
             const {
                 name,
-                owner,
                 broadcast,
                 maxParticipants
             } = req.body;
+            const owner = res.locals.authUserId as string;
 
             if (!name || !owner) {
                 return res.status(400).json({
@@ -154,9 +154,7 @@ const roomController = {
     // Entrar em uma sala
     async join(req: Request, res: Response) {
         try {
-            const {
-                user
-            } = req.body;
+            const user = res.locals.authUserId as string;
             const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
 
             if (!user) {
