@@ -9,7 +9,7 @@ export interface LiveRoom {
 
 interface RoomsHeroProps {
   onCreateRoom: () => void
-  /** Entra usando um código ou link colado no campo. */
+  /** Entra usando somente o código da sala. */
   onJoinByCode: (code: string) => void
   /** Sala ativa em destaque ("Ao vivo agora"), se existir. */
   liveRoom?: LiveRoom | null
@@ -73,7 +73,7 @@ export function RoomsHero({
               value={code}
               onChange={(event) => setCode(event.target.value)}
               aria-label="Código da sala"
-              placeholder="Cole o código ou link da sala"
+              placeholder="XXXX-XXXX"
               className="h-12 min-w-0 flex-1 border border-r-0 border-input bg-card px-3.5 text-sm outline-none focus:border-primary"
             />
             <button
