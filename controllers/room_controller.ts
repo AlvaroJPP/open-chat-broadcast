@@ -1,8 +1,23 @@
 import type { Request, Response } from "express";
+import { randomInt } from "node:crypto";
 
 import roomModel from "../models/room_model.ts";
 import { removeParticipant } from "../services/websocket/room.ts";
 
+
+const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+async function generateInviteCode(): Promise<string> {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+        const chars = Array.from({ length: 8 }, () =>
+            INVITE_CODE_ALPHABET[randomInt(INVITE_CODE_ALPHABET.length)]
+        );
+        const code = `${chars.slice(0, 4).join("")}-${chars.slice(4).join("")}`;
+        const exists = await roomModel.exists({ inviteCode: code });
+        if (!exists) return code;
+    }
+    throw new Error("Não foi possível gerar um código único para a sala.");
+}
 
 type RoomParticipant = {
     user: {
@@ -49,6 +64,7 @@ const roomController = {
                     name,
                     owner,
                     visibility,
+                    inviteCode: await generateInviteCode(),
                     broadcast: broadcast || null,
                     maxParticipants:
                         maxParticipants || 100,
@@ -96,6 +112,14 @@ const roomController = {
                 ]
             });
 
+            // Gera códigos para salas antigas que foram criadas antes desse recurso.
+            for (const room of rooms as any[]) {
+                if (!room.inviteCode) {
+                    room.inviteCode = await generateInviteCode();
+                    await room.save();
+                }
+            }
+
             return res.status(200).json({
                 success: true,
                 data: rooms
@@ -117,6 +141,43 @@ const roomController = {
     },
 
     // Buscar sala pelo ID
+    // Buscar sala pelo código de convite (XXXX-XXXX).
+    async findByCode(req: Request, res: Response) {
+        try {
+            const code = String(req.params["code"] ?? "").trim().toUpperCase();
+
+            if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
+                return res.status(400).json({
+                    success: false,
+                    error: { status: 400, message: "Código inválido. Use o formato XXXX-XXXX." }
+                });
+            }
+
+            const room = await roomModel.findOne({ inviteCode: code });
+            if (!room) {
+                return res.status(404).json({
+                    success: false,
+                    error: { status: 404, message: "Nenhuma sala encontrada com esse código." }
+                });
+            }
+
+            if (room.status === "closed") {
+                return res.status(409).json({
+                    success: false,
+                    error: { status: 409, message: "A sala está fechada." }
+                });
+            }
+
+            return res.status(200).json({ success: true, data: room });
+        } catch (error) {
+            console.error("[ROOM] Erro ao buscar sala pelo código:", error);
+            return res.status(500).json({
+                success: false,
+                error: { status: 500, message: "Erro ao buscar sala pelo código." }
+            });
+        }
+    },
+
     async findById(req: Request, res: Response) {
         try {
             const id = req.params["id"];
@@ -240,7 +301,7 @@ const roomController = {
                         participant.user.toString() === user
                 );
 
-            if (room.visibility === "private" && !alreadyParticipant && req.body?.code !== id) {
+            if (room.visibility === "private" && !alreadyParticipant && String(req.body?.code ?? "").trim().toUpperCase() !== room.inviteCode) {
                 return res.status(403).json({
                     success: false,
                     error: { status: 403, message: "Esta sala é privada. Informe o código de acesso correto." }
