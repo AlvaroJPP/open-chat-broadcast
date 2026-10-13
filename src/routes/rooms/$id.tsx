@@ -164,6 +164,7 @@ function getUserName(
 function RoomPage() {
     // ID do dono da sala (anfitrião), usado para a coroa na lista.
     const ownerIdRef = useRef<string | null>(null);
+    const websocketRef = useRef<BroadcastWebSocket | null>(null);
 
     const { id } = Route.useParams();
 
@@ -420,6 +421,7 @@ function RoomPage() {
 
         const websocket =
             new BroadcastWebSocket();
+        websocketRef.current = websocket;
 
         let unsubscribe:
             | (() => void)
@@ -442,6 +444,27 @@ function RoomPage() {
                 unsubscribe =
                     websocket.onMessage(
                         (message) => {
+                            if (message.event === "room:kicked") {
+                                const payload = message.data as { room?: string; message?: string };
+                                if (!payload.room || payload.room === id) {
+                                    window.alert(payload.message ?? "Você foi removido desta sala.");
+                                    window.location.assign("/rooms");
+                                }
+                                return;
+                            }
+
+                            if (message.event === "room:kick:success") {
+                                const payload = message.data as { message?: string };
+                                window.alert(payload.message ?? "Participante removido da sala.");
+                                return;
+                            }
+
+                            if (message.event === "room:kick:error") {
+                                const payload = message.data as { message?: string };
+                                window.alert(payload.message ?? "Não foi possível remover o participante.");
+                                return;
+                            }
+
                             /*
                              * Lista completa de participantes.
                              */
@@ -639,6 +662,7 @@ function RoomPage() {
         return () => {
             unsubscribe?.();
 
+            if (websocketRef.current === websocket) websocketRef.current = null;
             websocket.disconnect();
         };
     }, [id, room?.id]);
@@ -675,6 +699,9 @@ function RoomPage() {
             room={room}
             participants={participants}
             messages={messages}
+            onKickParticipant={(participantId) => {
+                websocketRef.current?.send("room:kick", { room: id, user: participantId });
+            }}
         />
     );
 }
