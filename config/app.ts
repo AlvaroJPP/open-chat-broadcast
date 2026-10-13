@@ -12,6 +12,7 @@ import messageRouter from "../routers/message_router.ts";
 import mediaRouter from "../routers/media_router.ts";
 
 const app = express();
+if (process.env["NODE_ENV"] === "production") app.set("trust proxy", 1);
 
 app.disable("x-powered-by");
 app.use((_req, res, next) => {
