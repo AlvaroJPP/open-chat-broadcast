@@ -3,6 +3,7 @@ import { WebSocket } from "ws";
 
 import userModel from "../../models/user_model.ts";
 import roomModel from "../../models/room_model.ts";
+import realtimeBus from "./realtime_bus.js";
 
 export type ConnectedClient = {
     socket: WebSocket;
@@ -161,6 +162,9 @@ export async function broadcastRoomParticipants(
     }
 
     broadcastRoomUpdated(roomId, clients);
+
+    void realtimeBus.publish({ event: "room:participants", data: { room: roomId, participants: participantsPayload }, roomId }).catch((error: unknown) => console.error("[REALTIME BUS] Falha ao publicar participantes:", error));
+    void realtimeBus.publish({ event: "room:updated", data: { room: roomId }, roomId }).catch((error: unknown) => console.error("[REALTIME BUS] Falha ao publicar atualização da sala:", error));
 }
 
 /**
@@ -394,6 +398,14 @@ function broadcastParticipant(
             room: data.room,
         });
     }
+
+    void realtimeBus.publish({
+        event,
+        data: { user: user ?? data.user, room: data.room },
+        roomId: data.room,
+    }).catch((error: unknown) => {
+        console.error("[REALTIME BUS] Falha ao publicar evento de participante:", error);
+    });
 }
 
 /**

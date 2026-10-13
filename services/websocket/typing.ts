@@ -3,6 +3,7 @@ import { WebSocket } from "ws";
 import roomModel from "../../models/room_model.ts";
 
 import type { ConnectedClient } from "./room.ts";
+import realtimeBus from "./realtime_bus.js";
 
 type TypingData = {
     user: string;
@@ -179,6 +180,10 @@ function broadcastTyping(
             }
         );
     }
+
+    void realtimeBus.publish({ event, data: { user: data.user, room: data.room }, roomId: data.room }).catch(error => console.error("[REALTIME BUS] Falha ao publicar typing:", error));
+
+    void realtimeBus.publish({ event, data: { user: data.user, room: data.room }, roomId: data.room }).catch((error: unknown) => console.error("[REALTIME BUS] Falha ao publicar typing:", error));
 
     console.log(
         `[WEBSOCKET] ${event} - Usuário ${data.user} na sala ${data.room}.`

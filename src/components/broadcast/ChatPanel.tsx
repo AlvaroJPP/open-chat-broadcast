@@ -102,7 +102,7 @@ function mergeMessages(
                     ...message.author,
                     name:
                         message.author.name === "Usuário"
-                            ? optimistic.author.name
+                            ? (optimistic?.author.name ?? message.author.name)
                             : message.author.name,
                 },
             };

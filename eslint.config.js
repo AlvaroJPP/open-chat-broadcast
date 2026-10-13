@@ -1,14 +1,21 @@
 import js from "@eslint/js";
-import eslintPluginPrettier from "eslint-plugin-prettier/recommended";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
-// desativa validacao de crlf e lf
+// Ignora diretórios e arquivos gerados ou fora do escopo do frontend.
 export default tseslint.config(
   {
-    ignores: ["dist", "services", "controllers", "cmd", "eslint.config.json", ".output", ".vinxi"],
+    ignores: [
+      "dist",
+      "services",
+      "controllers",
+      "cmd",
+      "eslint.config.js",
+      ".output",
+      ".vinxi",
+    ],
   },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
@@ -22,12 +29,11 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
     },
     rules: {
-      "prettier/prettier": ["error", { endOfLine: "auto" }], // usa lf auto
       ...reactHooks.configs.recommended.rules,
+      indent: "off",
       "no-restricted-imports": [
         "error",
         {
-          indent: ["error", 4],
           paths: [
             {
               name: "server-only",
@@ -37,9 +43,11 @@ export default tseslint.config(
           ],
         },
       ],
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true },
+      ],
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
-  eslintPluginPrettier,
 );

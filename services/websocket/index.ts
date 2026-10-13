@@ -3,6 +3,7 @@ import { WebSocketServer, WebSocket } from "ws";
 
 import userModel from "../../models/user_model.ts";
 import mongodb from "../../config/mongodb.ts";
+import realtimeBus from "./realtime_bus.js";
 
 import {
   ConnectedClient,
@@ -52,6 +53,7 @@ async function handleMessage(
   try {
     // WebSocket upgrades do not pass through the Express HTTP middleware.
     await mongodb.connect();
+    await realtimeBus.start();
 
     const payload = JSON.parse(message);
 
@@ -134,6 +136,20 @@ function start(server: HttpServer): WebSocketServer {
   });
 
   const clients = new Set<ConnectedClient>();
+
+  realtimeBus.subscribe((event) => {
+    for (const connectedClient of clients) {
+      if (event.targetUserId) {
+        if (connectedClient.userId !== event.targetUserId) continue;
+        if (event.roomId && connectedClient.roomId !== event.roomId) continue;
+      } else if (event.roomId && connectedClient.roomId !== event.roomId) {
+        continue;
+      }
+
+      send(connectedClient.socket, event.event, event.data);
+    }
+  });
+
   const OFFLINE_TIMEOUT_MS = Number(process.env["OFFLINE_TIMEOUT_MS"]) || 120_000;
 
   const offlineTimers = new Map<string, ReturnType<typeof setTimeout>>();

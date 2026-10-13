@@ -3,6 +3,7 @@ import { WebSocket } from "ws";
 import roomModel from "../../models/room_model.ts";
 
 import type { ConnectedClient } from "./room.ts";
+import realtimeBus from "./realtime_bus.js";
 
 type WebRTCData = {
     user: string;
@@ -278,18 +279,21 @@ function sendToTarget(
         delivered = true;
     }
 
+    void realtimeBus.publish({
+        event,
+        data: payload,
+        roomId: data.room,
+        targetUserId: data.target,
+    }).catch((error: unknown) => {
+        console.error("[REALTIME BUS] Falha ao publicar sinalização WebRTC:", error);
+    });
+
     if (delivered) {
         return;
     }
 
-    send(
-        client.socket,
-        "webrtc:error",
-        {
-            message:
-                "Usuário alvo não está conectado."
-        }
-    );
+    // O alvo pode estar conectado a outra instância. A ausência de socket local
+    // não significa que ele esteja desconectado globalmente.
 }
 
 function send(
