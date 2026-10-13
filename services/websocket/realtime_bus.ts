@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ChangeStream, ChangeStreamDocument } from "mongoose";
+import type { ChangeStream, ChangeStreamDocument } from "mongodb";
 import mongoose from "mongoose";
 
 import realtimeEventModel from "../../models/realtime_event_model.ts";
