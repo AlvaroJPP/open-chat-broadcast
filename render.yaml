@@ -13,6 +13,8 @@ services:
         value: 0.0.0.0
       - key: MONGODB_URI
         sync: false
+      - key: SESSION_SECRET
+        sync: false
       - key: FRONTEND_URL
         value: https://open-chat-broadcast-ajpp.vercel.app
       - key: ALLOWED_ORIGINS
