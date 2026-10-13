@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { authenticateUser, AppError } from "../services/user_service.ts";
+import { createSessionToken, sessionCookieName, sessionCookieOptions } from "../services/auth/session.ts";
 
 const TAG = "[AUTH]";
 
@@ -22,17 +23,8 @@ const authController = {
 
             const user = await authenticateUser(nickname, pwd);
 
-            // TODO: gerar token real (ex: JWT) em vez do placeholder abaixo
-            const token = "TOKEN_PLACEHOLDER";
-
-            // Cookie httpOnly: não acessível via JS no front, mitigando XSS.
-            // `secure: true` deve ser habilitado em produção (exige HTTPS).
-            res.cookie("token", token, {
-                httpOnly: true,
-                secure: process.env["NODE_ENV"] === "production",
-                sameSite: "lax",
-                maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
-            });
+            const token = createSessionToken(String((user as { _id: unknown })._id));
+            res.cookie(sessionCookieName, token, sessionCookieOptions);
 
             return res.status(200).json({
                 success: true,
@@ -45,7 +37,12 @@ const authController = {
     },
 
     async logout(_req: Request, res: Response) {
-        res.clearCookie("token");
+        res.clearCookie(sessionCookieName, {
+            httpOnly: true,
+            secure: process.env["NODE_ENV"] === "production",
+            sameSite: process.env["NODE_ENV"] === "production" ? "none" : "lax",
+            path: "/",
+        });
 
         return res.status(200).json({
             success: true,
