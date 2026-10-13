@@ -45,6 +45,18 @@ app.use((req, res, next) => {
   );
 });
 
+// Endpoint de diagnóstico seguro: não expõe credenciais nem dados de usuários.
+// Como vem depois do middleware de conexão, confirma também o acesso ao MongoDB.
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    data: {
+      api: "ok",
+      database: "connected",
+    },
+  });
+});
+
 app.use("/api/users", userRouter);
 app.use("/api/broadcasts", broadcastRouter);
 app.use("/api/rooms", roomRouter);
