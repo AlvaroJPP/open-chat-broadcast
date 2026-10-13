@@ -43,6 +43,22 @@ const messageController = {
                 });
             }
 
+            const userId = String(res.locals.authUserId);
+            const isParticipant = room.participants.some(
+                (participant: RoomParticipant) => participant.user.toString() === userId
+            );
+            const isOwner = room.owner.toString() === userId;
+
+            if (!isParticipant && !isOwner) {
+                return res.status(403).json({
+                    success: false,
+                    error: {
+                        status: 403,
+                        message: "Você precisa participar da sala para ler as mensagens."
+                    }
+                });
+            }
+
             const messages =
                 await messageModel
                     .find({
