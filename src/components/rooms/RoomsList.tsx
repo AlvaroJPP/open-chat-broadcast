@@ -3,6 +3,7 @@ import { Loader2, RefreshCw, Search, Users, LockKeyhole, Globe } from 'lucide-re
 
 export interface RoomListItem {
   _id: string
+  inviteCode?: string
   name: string
   maxParticipants: number
   participants?: unknown[]
@@ -201,7 +202,7 @@ export function RoomsList({
                     )}
                   </div>
                   <p className="truncate text-xs text-muted-foreground">
-                    Código: {room._id}
+                    Código: {room.inviteCode || "gerando..."}
                   </p>
                 </div>
 
