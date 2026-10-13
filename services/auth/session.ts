@@ -3,6 +3,21 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 export const sessionCookieName = "token";
 
+export type SessionTokenStatus =
+  | "missing"
+  | "oversized"
+  | "malformed"
+  | "invalid_signature"
+  | "invalid_payload"
+  | "expired"
+  | "configuration_error"
+  | "ok";
+
+export interface SessionTokenInspection {
+  userId: string | null;
+  reason: SessionTokenStatus;
+}
+
 function getSecret(): string {
   const secret = process.env["SESSION_SECRET"];
   if (secret && secret.length >= 32) return secret;
@@ -24,20 +39,57 @@ export function createSessionToken(userId: string): string {
   return `${payload}.${sign(payload)}`;
 }
 
-export function verifySessionToken(token: string | undefined): string | null {
-  if (!token || token.length > 2048) return null;
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature) return null;
-  try {
-    const expected = Buffer.from(sign(payload));
-    const received = Buffer.from(signature);
-    if (expected.length !== received.length || !timingSafeEqual(expected, received)) return null;
-    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { sub?: unknown; exp?: unknown };
-    if (typeof parsed.sub !== "string" || typeof parsed.exp !== "number" || parsed.exp <= Date.now() / 1000) return null;
-    return parsed.sub;
-  } catch {
-    return null;
+export function inspectSessionToken(token: string | undefined): SessionTokenInspection {
+  if (!token) return { userId: null, reason: "missing" };
+  if (token.length > 2048) return { userId: null, reason: "oversized" };
+
+  const parts = token.split(".");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return { userId: null, reason: "malformed" };
   }
+
+  const [payload, signature] = parts;
+
+  let expected: Buffer;
+  try {
+    expected = Buffer.from(sign(payload));
+  } catch {
+    return { userId: null, reason: "configuration_error" };
+  }
+
+  const received = Buffer.from(signature);
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
+    return { userId: null, reason: "invalid_signature" };
+  }
+
+  let parsed: { sub?: unknown; exp?: unknown };
+  try {
+    parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      sub?: unknown;
+      exp?: unknown;
+    };
+  } catch {
+    return { userId: null, reason: "invalid_payload" };
+  }
+
+  if (
+    typeof parsed.sub !== "string" ||
+    parsed.sub.length === 0 ||
+    typeof parsed.exp !== "number" ||
+    !Number.isFinite(parsed.exp)
+  ) {
+    return { userId: null, reason: "invalid_payload" };
+  }
+
+  if (parsed.exp <= Date.now() / 1000) {
+    return { userId: null, reason: "expired" };
+  }
+
+  return { userId: parsed.sub, reason: "ok" };
+}
+
+export function verifySessionToken(token: string | undefined): string | null {
+  return inspectSessionToken(token).userId;
 }
 
 export function readCookie(header: string | undefined, name: string): string | undefined {
