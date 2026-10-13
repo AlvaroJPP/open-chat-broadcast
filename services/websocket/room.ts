@@ -22,6 +22,7 @@ type RoomParticipant = {
               status?: string;
           };
     joinedAt: Date;
+    muted?: boolean;
 };
 
 type RoomJoinData = {
@@ -86,6 +87,7 @@ function buildParticipantsPayload(
         return {
             user: serializeUser(participant.user),
             joinedAt: participant.joinedAt,
+            muted: participant.muted === true,
             online: [...clients].some(
                 (other) =>
                     other.userId === userId &&
@@ -515,6 +517,81 @@ export async function kickParticipant(
 /**
  * Remove um participante que ficou offline por 2 minutos.
  */
+
+
+/** Transfere a propriedade da sala apenas quando solicitado pelo proprietário atual. */
+export async function transferRoomOwnership(
+    client: ConnectedClient,
+    data: RoomJoinData,
+    clients: Set<ConnectedClient>
+): Promise<void> {
+    const fail = (message: string) => send(client.socket, "room:owner:error", { message });
+    if (!data?.room || !data?.user) return fail("Sala e novo proprietário são obrigatórios.");
+    if (client.roomId !== data.room || !client.userId) return fail("Você não está conectado a esta sala.");
+    const room = await roomModel.findById(data.room);
+    if (!room) return fail("Sala não encontrada.");
+    if (room.owner.toString() !== client.userId) return fail("Somente o proprietário atual pode transferir a propriedade.");
+    if (data.user === client.userId) return fail("Você já é o proprietário desta sala.");
+    const targetIsParticipant = room.participants.some(
+        (p: RoomParticipant) => getParticipantUserId(p.user) === data.user
+    );
+    if (!targetIsParticipant) return fail("O novo proprietário precisa estar na sala.");
+
+    await roomModel.findByIdAndUpdate(data.room, { owner: data.user }, { runValidators: true });
+    const eventData = { room: data.room, owner: data.user };
+    for (const participant of clients) {
+        if (participant.roomId === data.room) send(participant.socket, "room:owner:updated", eventData);
+    }
+    void realtimeBus.publish({
+        event: "room:owner:updated", data: eventData, roomId: data.room,
+    }).catch((error: unknown) => console.error("[REALTIME BUS] Falha ao publicar troca de proprietário:", error));
+    await broadcastRoomParticipants(data.room, clients);
+    send(client.socket, "room:owner:success", { message: "Propriedade da sala transferida." });
+    console.log(`[WEBSOCKET] ${client.userId} transferiu a propriedade da sala ${data.room} para ${data.user}.`);
+}
+
+/** Silencia ou libera o microfone de um participante por solicitação do proprietário. */
+export async function setParticipantMuted(
+    client: ConnectedClient,
+    data: RoomJoinData & { muted?: boolean },
+    clients: Set<ConnectedClient>
+): Promise<void> {
+    const fail = (message: string) => send(client.socket, "room:mute:error", { message });
+    if (!data?.room || !data?.user || typeof data.muted !== "boolean") {
+        return fail("Sala, participante e estado do microfone são obrigatórios.");
+    }
+    if (client.roomId !== data.room || !client.userId) return fail("Você não está conectado a esta sala.");
+    const room = await roomModel.findById(data.room);
+    if (!room) return fail("Sala não encontrada.");
+    if (room.owner.toString() !== client.userId) return fail("Somente o proprietário pode controlar o microfone dos participantes.");
+    if (data.user === client.userId) return fail("Você não pode controlar seu próprio microfone por este menu.");
+    const targetIndex = room.participants.findIndex(
+        (p: RoomParticipant) => getParticipantUserId(p.user) === data.user
+    );
+    if (targetIndex < 0) return fail("Esse usuário não está na sala.");
+
+    await roomModel.updateOne(
+        { _id: data.room, "participants.user": data.user },
+        { $set: { "participants.$.muted": data.muted } }
+    );
+    const eventData = {
+        room: data.room, user: data.user, muted: data.muted,
+        message: data.muted ? "O proprietário silenciou seu microfone." : "O proprietário liberou seu microfone."
+    };
+    for (const target of clients) {
+        if (target.userId === data.user && target.roomId === data.room) {
+            send(target.socket, "room:mute:force", eventData);
+        }
+    }
+    void realtimeBus.publish({
+        event: "room:mute:force", data: eventData, roomId: data.room, targetUserId: data.user,
+    }).catch((error: unknown) => console.error("[REALTIME BUS] Falha ao notificar silenciamento:", error));
+    await broadcastRoomParticipants(data.room, clients);
+    send(client.socket, "room:mute:success", {
+        message: data.muted ? "Participante silenciado." : "Microfone do participante liberado."
+    });
+}
+
 export async function removeOfflineParticipant(
     userId: string,
     roomId: string,
