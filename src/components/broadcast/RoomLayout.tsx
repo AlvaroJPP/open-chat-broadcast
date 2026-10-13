@@ -25,9 +25,10 @@ interface RoomLayoutProps {
 room: RoomInfo
 participants: Participant[]
 messages: ChatMessageData[]
+onKickParticipant?: (participantId: string) => void
 }
 
-export function RoomLayout({room, participants, messages}: RoomLayoutProps) {
+export function RoomLayout({room, participants, messages, onKickParticipant}: RoomLayoutProps) {
 const fallbackCurrentUser: Participant = {
 id: "unknown",
 name: "Participante",
@@ -161,6 +162,8 @@ onOpenParticipants={() => setMenuOpen(true)}
         participants={participants}
         liveIds={liveIds}
         room={room}
+        canManageParticipants={!!currentUser.isHost}
+        onKickParticipant={onKickParticipant}
       />
     )}
 
@@ -221,6 +224,8 @@ onOpenParticipants={() => setMenuOpen(true)}
       participants={participants}
       liveIds={liveIds}
       onClose={() => setMenuOpen(false)}
+      canManageParticipants={!!currentUser.isHost}
+      onKickParticipant={onKickParticipant}
     />
   )}
 </div>
