@@ -24,13 +24,13 @@ export function RoomPanel({ room, onInvite }: RoomPanelProps) {
     return (
         <section className="mt-6 flex flex-col gap-2.5 border border-border bg-card p-3.5">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                Link da sala
+                Código da sala
             </span>
 
             <button
                 type="button"
                 onClick={handleCopy}
-                aria-label="Copiar link da sala"
+                aria-label="Copiar código da sala"
                 className="flex h-11 items-center gap-2 border border-border bg-background px-3 text-left"
             >
                 <Link2 className="size-4 shrink-0 text-muted-foreground" />
@@ -47,7 +47,7 @@ export function RoomPanel({ room, onInvite }: RoomPanelProps) {
                 className="flex h-12 items-center justify-center gap-2 bg-primary text-sm font-bold text-primary-foreground hover:opacity-90"
             >
                 <Plus className="size-5" />
-                {copied ? "Link copiado" : "Convidar pessoas"}
+                {copied ? "Código copiado" : "Convidar pessoas"}
             </button>
         </section>
     );
