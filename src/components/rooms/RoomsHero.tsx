@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MonitorPlay, Plus, Users } from 'lucide-react'
 
 export interface LiveRoom {
-  id: string
+  code: string
   name: string
   count: number
 }
@@ -13,7 +13,7 @@ interface RoomsHeroProps {
   onJoinByCode: (code: string) => void
   /** Sala ativa em destaque ("Ao vivo agora"), se existir. */
   liveRoom?: LiveRoom | null
-  onJoinLive?: (id: string) => void
+  onJoinLive?: (code: string) => void
   disabled?: boolean
 }
 
@@ -111,7 +111,7 @@ export function RoomsHero({
               <button
                 type="button"
                 disabled={disabled}
-                onClick={() => onJoinLive?.(liveRoom.id)}
+                onClick={() => onJoinLive?.(liveRoom.code)}
                 className="h-11 bg-primary px-5 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
                 Entrar na sala
