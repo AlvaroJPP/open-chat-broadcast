@@ -4,7 +4,7 @@ export const mockRoom: RoomInfo = {
     id: "7f3a9e",
     name: "Sala do Dev",
     isLive: true,
-    inviteUrl: "https://openchat.app/room/7f3a9e",
+    inviteUrl: "ABCD-1234",
 };
 
 export const mockParticipants: Participant[] = [
