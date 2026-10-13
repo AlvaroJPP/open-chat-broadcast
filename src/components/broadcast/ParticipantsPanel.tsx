@@ -14,6 +14,8 @@ interface ParticipantsPanelProps {
     children?: ReactNode;
     canManageParticipants?: boolean;
     onKickParticipant?: (participantId: string) => void;
+    onTransferOwnership?: (participantId: string) => void;
+    onToggleMuteParticipant?: (participantId: string, muted: boolean) => void;
 }
 
 export function ParticipantsPanel({
@@ -23,6 +25,8 @@ export function ParticipantsPanel({
     children,
     canManageParticipants = false,
     onKickParticipant,
+    onTransferOwnership,
+    onToggleMuteParticipant,
 }: ParticipantsPanelProps) {
     const isLive = (p: Participant) =>
         liveIds.includes(p.id) || !!p.isSharingScreen || p.status === "transmitindo";
@@ -63,7 +67,7 @@ export function ParticipantsPanel({
                                 <span>{broadcasting.length}</span>
                             </p>
                             {broadcasting.map((participant) => (
-                                <ParticipantItem key={participant.id} participant={participant} live canKick={canManageParticipants} onKick={onKickParticipant} />
+                                <ParticipantItem key={participant.id} participant={participant} live canKick={canManageParticipants} onKick={onKickParticipant} canManage={canManageParticipants} onTransferOwnership={onTransferOwnership} onToggleMute={onToggleMuteParticipant} />
                             ))}
                         </>
                     )}
