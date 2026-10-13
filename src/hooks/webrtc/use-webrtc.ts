@@ -251,6 +251,7 @@ export function useWebRTC({ userId, roomId }: UseWebRTCOptions) {
         handleIceCandidate,
         sendMediaState,
         setLastError,
+        stopMic,
         setSharingUsers,
         setMediaStates,
     });
