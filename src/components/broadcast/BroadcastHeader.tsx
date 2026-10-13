@@ -72,7 +72,7 @@ export function BroadcastHeader({
                 )}
             </div>
 
-            {/* Link da sala (desktop) */}
+            {/* Código da sala (desktop) */}
             <div className="ml-auto hidden h-10 min-w-0 max-w-sm flex-1 items-center gap-2 border border-border bg-card px-3 text-sm text-muted-foreground md:flex">
                 <Link2 className="size-4 shrink-0" />
                 <span className="truncate text-xs">{room.inviteUrl}</span>
@@ -80,7 +80,7 @@ export function BroadcastHeader({
                     type="button"
                     onClick={() => navigator.clipboard?.writeText(room.inviteUrl)}
                     className="ml-auto shrink-0 transition-colors hover:text-foreground"
-                    aria-label="Copiar link da sala"
+                    aria-label="Copiar código da sala"
                 >
                     <Copy className="size-4" />
                 </button>
