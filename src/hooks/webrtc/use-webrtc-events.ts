@@ -28,6 +28,7 @@ type UseWebRTCEventsOptions = {
 
   setLastError: (error: string | null) => void
   stopMic: () => void
+  mutedByOwnerRef: MutableRef<boolean>
 
   setSharingUsers: React.Dispatch<React.SetStateAction<string[]>>
 
@@ -47,6 +48,7 @@ export function useWebRTCEvents({
   sendMediaState,
   setLastError,
   stopMic,
+  mutedByOwnerRef,
   setSharingUsers,
   setMediaStates,
 }: UseWebRTCEventsOptions) {
@@ -58,13 +60,21 @@ export function useWebRTCEvents({
         camera?: boolean
         screen?: boolean
         mic?: boolean
+        room?: string
+        user?: string
+        muted?: boolean
       }
 
       switch (message.event) {
         case "room:mute:force": {
-          if (data.room === roomId && data.user === userId && data.muted === true) {
-            stopMic()
-            setLastError(data.message ?? "Seu microfone foi silenciado pelo proprietário.")
+          if (data.room === roomId && data.user === userId && typeof data.muted === "boolean") {
+            mutedByOwnerRef.current = data.muted
+            if (data.muted) {
+              stopMic()
+              setLastError(data.message ?? "Seu microfone foi silenciado pelo proprietário.")
+            } else {
+              setLastError(null)
+            }
           }
           break
         }
@@ -95,6 +105,11 @@ export function useWebRTCEvents({
 
           for (const participant of participants) {
             const targetUserId = normalizeTargetId(participant.user) ?? participant.id ?? null
+
+            if (targetUserId === userId && typeof participant.muted === "boolean") {
+              mutedByOwnerRef.current = participant.muted
+              if (participant.muted) stopMic()
+            }
 
             if (
               !targetUserId ||
@@ -213,6 +228,7 @@ export function useWebRTCEvents({
       sendMediaState,
       setLastError,
       stopMic,
+      mutedByOwnerRef,
       setMediaStates,
       setSharingUsers,
       sharingUsersRef,
