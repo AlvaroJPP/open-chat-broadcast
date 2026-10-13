@@ -10,6 +10,8 @@ interface RoomParticipantsDrawerProps {
     onClose: () => void;
     canManageParticipants?: boolean;
     onKickParticipant?: (participantId: string) => void;
+    onTransferOwnership?: (participantId: string) => void;
+    onToggleMuteParticipant?: (participantId: string, muted: boolean) => void;
 }
 
 export function RoomParticipantsDrawer({
@@ -19,6 +21,8 @@ export function RoomParticipantsDrawer({
     onClose,
     canManageParticipants = false,
     onKickParticipant,
+    onTransferOwnership,
+    onToggleMuteParticipant,
 }: RoomParticipantsDrawerProps) {
     return (
         <>
@@ -38,6 +42,8 @@ export function RoomParticipantsDrawer({
                     onClose={onClose}
                     canManageParticipants={canManageParticipants}
                     onKickParticipant={onKickParticipant}
+                    onTransferOwnership={onTransferOwnership}
+                    onToggleMuteParticipant={onToggleMuteParticipant}
                 >
                     <RoomPanel room={room} />
                 </ParticipantsPanel>
