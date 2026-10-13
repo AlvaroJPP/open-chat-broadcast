@@ -19,9 +19,11 @@ interface ParticipantItemProps {
     participant: Participant;
     /** Está transmitindo a tela agora. */
     live?: boolean;
+    canKick?: boolean;
+    onKick?: (participantId: string) => void;
 }
 
-export function ParticipantItem({ participant, live = false }: ParticipantItemProps) {
+export function ParticipantItem({ participant, live = false, canKick = false, onKick }: ParticipantItemProps) {
     return (
         <div className="flex h-[60px] items-center gap-3 border-b border-border">
             <div className="relative shrink-0">
@@ -75,8 +77,13 @@ export function ParticipantItem({ participant, live = false }: ParticipantItemPr
                     <DropdownMenuContent>
                         <DropdownMenuItem>Ver perfil</DropdownMenuItem>
                         {!participant.isYou && <DropdownMenuItem>Silenciar</DropdownMenuItem>}
-                        {!participant.isYou && (
-                            <DropdownMenuItem className="text-destructive">Remover da sala</DropdownMenuItem>
+                        {canKick && !participant.isYou && (
+                            <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onSelect={() => onKick?.(participant.id)}
+                            >
+                                Remover da sala
+                            </DropdownMenuItem>
                         )}
                     </DropdownMenuContent>
                 </DropdownMenu>
