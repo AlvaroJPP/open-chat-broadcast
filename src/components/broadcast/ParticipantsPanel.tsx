@@ -12,6 +12,8 @@ interface ParticipantsPanelProps {
     onClose?: () => void;
     /** Conteúdo extra no fim da lista (ex.: link da sala). */
     children?: ReactNode;
+    canManageParticipants?: boolean;
+    onKickParticipant?: (participantId: string) => void;
 }
 
 export function ParticipantsPanel({
@@ -19,6 +21,8 @@ export function ParticipantsPanel({
     liveIds = [],
     onClose,
     children,
+    canManageParticipants = false,
+    onKickParticipant,
 }: ParticipantsPanelProps) {
     const isLive = (p: Participant) =>
         liveIds.includes(p.id) || !!p.isSharingScreen || p.status === "transmitindo";
@@ -59,7 +63,7 @@ export function ParticipantsPanel({
                                 <span>{broadcasting.length}</span>
                             </p>
                             {broadcasting.map((participant) => (
-                                <ParticipantItem key={participant.id} participant={participant} live />
+                                <ParticipantItem key={participant.id} participant={participant} live canKick={canManageParticipants} onKick={onKickParticipant} />
                             ))}
                         </>
                     )}
@@ -75,7 +79,7 @@ export function ParticipantsPanel({
                                 <span>{watching.length}</span>
                             </p>
                             {watching.map((participant) => (
-                                <ParticipantItem key={participant.id} participant={participant} />
+                                <ParticipantItem key={participant.id} participant={participant} canKick={canManageParticipants} onKick={onKickParticipant} />
                             ))}
                         </>
                     )}
