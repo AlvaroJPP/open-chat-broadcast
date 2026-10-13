@@ -1,6 +1,11 @@
 
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/**/*.ts": {
+      "includeFiles": "config/**, routers/**, controllers/**, services/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/:path((?!api/).*)",
