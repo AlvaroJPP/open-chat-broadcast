@@ -35,6 +35,7 @@ interface Room {
     joinedAt: string
   }>
   status: 'waiting' | 'active' | 'closed'
+  visibility?: 'public' | 'private'
 }
 
 function getUserId(user: User | null) {
@@ -58,6 +59,7 @@ function RoomsPage() {
   const [roomName, setRoomName] = useState('')
   const [maxParticipants, setMaxParticipants] =
     useState('100')
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public')
 
   const [roomId, setRoomId] = useState('')
 
@@ -269,6 +271,7 @@ function RoomsPage() {
               Number(
                 maxParticipants
               ) || 100,
+            visibility,
           }),
         })
 
@@ -291,6 +294,7 @@ function RoomsPage() {
       setShowCreate(false)
       setRoomName('')
       setMaxParticipants('100')
+      setVisibility('public')
 
       await loadRooms()
 
@@ -316,7 +320,8 @@ function RoomsPage() {
    * Entra em uma sala.
    */
   async function handleJoinRoom(
-    id: string
+    id: string,
+    accessCode?: string
   ) {
     const userId =
       getUserId(user)
@@ -347,8 +352,8 @@ function RoomsPage() {
             credentials: 'include',
 
             body: JSON.stringify({
-              user:
-                userId,
+              user: userId,
+              ...(accessCode ? { code: accessCode } : {}),
             }),
           }
         )
@@ -436,14 +441,14 @@ function RoomsPage() {
       return
     }
 
-    await handleJoinRoom(id)
+    await handleJoinRoom(id, id)
   }
 
   /**
    * Sala ativa com mais gente, mostrada em "Ao vivo agora".
    */
   const liveRoom = rooms
-    .filter((room) => room.status === 'active')
+    .filter((room) => room.status === 'active' && room.visibility !== 'private')
     .sort(
       (a, b) =>
         (b.participants?.length || 0) - (a.participants?.length || 0)
@@ -536,6 +541,32 @@ function RoomsPage() {
 
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
+                  Visibilidade da sala
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setVisibility('public')}
+                    aria-pressed={visibility === 'public'}
+                    className={`rounded-md border px-3 py-3 text-left text-sm ${visibility === 'public' ? 'border-primary bg-primary/10' : 'border-input hover:bg-muted'}`}
+                  >
+                    <span className="block font-semibold">Pública</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">Visível para todos os usuários logados.</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVisibility('private')}
+                    aria-pressed={visibility === 'private'}
+                    className={`rounded-md border px-3 py-3 text-left text-sm ${visibility === 'private' ? 'border-primary bg-primary/10' : 'border-input hover:bg-muted'}`}
+                  >
+                    <span className="block font-semibold">Privada</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">Só entra quem tiver o código da sala.</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">
                   Limite de participantes
                 </label>
 
@@ -598,7 +629,7 @@ function RoomsPage() {
 
             <div className="mt-6">
               <label className="mb-1.5 block text-sm font-medium">
-                ID da sala
+                Código ou ID da sala
               </label>
 
               <input
@@ -610,7 +641,7 @@ function RoomsPage() {
                     e.target.value
                   )
                 }
-                placeholder="ID da sala"
+                placeholder="Cole o código ou link da sala"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
 
