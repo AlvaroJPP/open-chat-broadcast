@@ -22,7 +22,8 @@ const roomController = {
             const {
                 name,
                 broadcast,
-                maxParticipants
+                maxParticipants,
+                visibility = "public"
             } = req.body;
             const owner = res.locals.authUserId as string;
 
@@ -36,10 +37,18 @@ const roomController = {
                 });
             }
 
+            if (visibility !== "public" && visibility !== "private") {
+                return res.status(400).json({
+                    success: false,
+                    error: { status: 400, message: "A visibilidade deve ser public ou private." }
+                });
+            }
+
             const room =
                 await roomModel.create({
                     name,
                     owner,
+                    visibility,
                     broadcast: broadcast || null,
                     maxParticipants:
                         maxParticipants || 100,
@@ -81,6 +90,7 @@ const roomController = {
             const userId = String(res.locals.authUserId);
             const rooms = await roomModel.find({
                 $or: [
+                    { visibility: "public" },
                     { owner: userId },
                     { "participants.user": userId }
                 ]
@@ -134,6 +144,21 @@ const roomController = {
                         status: 404,
                         message: "Sala não encontrada."
                     }
+                });
+            }
+
+            const userId = String(res.locals.authUserId);
+            const canViewPrivateRoom =
+                room.visibility !== "private" ||
+                room.owner.toString() === userId ||
+                room.participants.some((participant: RoomParticipant) =>
+                    participant.user.toString() === userId
+                );
+
+            if (!canViewPrivateRoom) {
+                return res.status(404).json({
+                    success: false,
+                    error: { status: 404, message: "Sala não encontrada." }
                 });
             }
 
@@ -211,6 +236,13 @@ const roomController = {
                     (participant: RoomParticipant) =>
                         participant.user.toString() === user
                 );
+
+            if (room.visibility === "private" && !alreadyParticipant && req.body?.code !== id) {
+                return res.status(403).json({
+                    success: false,
+                    error: { status: 403, message: "Esta sala é privada. Informe o código de acesso correto." }
+                });
+            }
 
             if (alreadyParticipant) {
                 return res.status(409).json({
@@ -375,12 +407,21 @@ const roomController = {
                 });
             }
 
-            const { name, broadcast, maxParticipants, status } = req.body;
+            const { name, broadcast, maxParticipants, status, visibility } = req.body;
             const updates: Record<string, unknown> = {};
             if (name !== undefined) updates.name = name;
             if (broadcast !== undefined) updates.broadcast = broadcast;
             if (maxParticipants !== undefined) updates.maxParticipants = maxParticipants;
             if (status !== undefined) updates.status = status;
+            if (visibility !== undefined) {
+                if (visibility !== "public" && visibility !== "private") {
+                    return res.status(400).json({
+                        success: false,
+                        error: { status: 400, message: "A visibilidade deve ser public ou private." }
+                    });
+                }
+                updates.visibility = visibility;
+            }
 
             const room = await roomModel.findByIdAndUpdate(id, updates, {
                 new: true,
