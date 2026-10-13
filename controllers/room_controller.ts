@@ -261,9 +261,7 @@ const roomController = {
     // Sair de uma sala
     async leave(req: Request, res: Response) {
         try {
-            const {
-                user
-            } = req.body;
+            const user = res.locals.authUserId as string;
             const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
 
             if (!user) {
@@ -389,27 +387,33 @@ const roomController = {
                 });
             }
 
-            const {
-                name,
-                broadcast,
-                maxParticipants,
-                status
-            } = req.body;
+            const roomToUpdate = await roomModel.findById(id);
 
-            const room =
-                await roomModel.findByIdAndUpdate(
-                    id,
-                    {
-                        name,
-                        broadcast,
-                        maxParticipants,
-                        status
-                    },
-                    {
-                        new: true,
-                        runValidators: true
-                    }
-                );
+            if (!roomToUpdate) {
+                return res.status(404).json({
+                    success: false,
+                    error: { status: 404, message: "Sala não encontrada." }
+                });
+            }
+
+            if (roomToUpdate.owner.toString() !== String(res.locals.authUserId)) {
+                return res.status(403).json({
+                    success: false,
+                    error: { status: 403, message: "Somente o proprietário pode alterar a sala." }
+                });
+            }
+
+            const { name, broadcast, maxParticipants, status } = req.body;
+            const updates: Record<string, unknown> = {};
+            if (name !== undefined) updates.name = name;
+            if (broadcast !== undefined) updates.broadcast = broadcast;
+            if (maxParticipants !== undefined) updates.maxParticipants = maxParticipants;
+            if (status !== undefined) updates.status = status;
+
+            const room = await roomModel.findByIdAndUpdate(id, updates, {
+                new: true,
+                runValidators: true
+            });
 
             if (!room) {
                 return res.status(404).json({
@@ -456,8 +460,7 @@ const roomController = {
                 });
             }
 
-            const room =
-                await roomModel.findByIdAndDelete(id);
+            const room = await roomModel.findById(id);
 
             if (!room) {
                 return res.status(404).json({
@@ -468,6 +471,15 @@ const roomController = {
                     }
                 });
             }
+
+            if (room.owner.toString() !== String(res.locals.authUserId)) {
+                return res.status(403).json({
+                    success: false,
+                    error: { status: 403, message: "Somente o proprietário pode excluir a sala." }
+                });
+            }
+
+            await roomModel.findByIdAndDelete(id);
 
             return res.status(200).json({
                 success: true,
