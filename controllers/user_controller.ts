@@ -90,6 +90,13 @@ const userController = {
                 });
             }
 
+            if (id !== String(res.locals.authUserId)) {
+                return res.status(403).json({
+                    success: false,
+                    error: { status: 403, message: "Você só pode atualizar seu próprio perfil." },
+                });
+            }
+
             const user = await updateUser(id, { nickname, avatar, status });
 
             return res.status(200).json({
@@ -111,6 +118,13 @@ const userController = {
                 return res.status(400).json({
                     success: false,
                     error: { status: 400, message: "ID do usuário é obrigatório." },
+                });
+            }
+
+            if (id !== String(res.locals.authUserId)) {
+                return res.status(403).json({
+                    success: false,
+                    error: { status: 403, message: "Você só pode excluir sua própria conta." },
                 });
             }
 
