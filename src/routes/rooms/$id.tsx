@@ -212,6 +212,8 @@ function RoomPage() {
                         },
                         body: JSON.stringify({
                             user: currentUserId,
+                            // O ID da sala também funciona como código de convite.
+                            code: id,
                         }),
                     }
                 );
