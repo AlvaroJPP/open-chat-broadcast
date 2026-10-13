@@ -1,6 +1,7 @@
 import { WebSocket } from "ws";
 
 import type { ConnectedClient } from "./room.ts";
+import realtimeBus from "./realtime_bus.js";
 
 type MediaStateData = {
     user: string;
@@ -52,4 +53,18 @@ export function relayMediaState(
             connectedClient.socket.send(payload);
         }
     }
+
+    void realtimeBus.publish({
+        event: "media:state",
+        data: {
+            user: data.user,
+            room: data.room,
+            camera: Boolean(data.camera),
+            screen: Boolean(data.screen),
+            mic: Boolean(data.mic),
+        },
+        roomId: data.room,
+    }).catch((error: unknown) => {
+        console.error("[REALTIME BUS] Falha ao publicar estado de mídia:", error);
+    });
 }
