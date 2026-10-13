@@ -1,16 +1,13 @@
 import { Router } from "express";
-
 import messageController from "../controllers/message_controller.ts";
+import { requireAuth } from "../middleware/require_auth.ts";
 
 const messageRouter = Router();
 
-// Buscar mensagens de uma sala
+messageRouter.use(requireAuth);
+
 messageRouter.get("/rooms/:roomId/messages", messageController.findByRoom);
-
-// Criar mensagem em uma sala
 messageRouter.post("/rooms/:roomId/messages", messageController.create);
-
-// Excluir mensagem
 messageRouter.delete("/messages/:id", messageController.delete);
 
 export default messageRouter;
