@@ -29,9 +29,14 @@ const userController = {
 
             const user = await createUser({ email, nickname, avatar, pwd });
 
+            const safeUser = user.toObject ? user.toObject() : { ...user };
+            if (safeUser && typeof safeUser === "object" && "pwd" in safeUser) {
+                delete safeUser.pwd;
+            }
+
             return res.status(201).json({
                 success: true,
-                data: user,
+                data: safeUser,
             });
         } catch (error) {
             console.error(TAG, "Erro ao criar usuário:", error);
