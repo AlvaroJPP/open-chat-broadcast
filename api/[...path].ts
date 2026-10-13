@@ -2,17 +2,28 @@ import type { Request, Response } from "express";
 import app from "../config/app.ts";
 
 /**
- * A Vercel catch-all function can receive the path with or without the
- * /api prefix depending on how the request is routed. The Express app
- * registers its endpoints under /api, so normalize the URL before dispatch.
+ * Normaliza a URL recebida pela função catch-all da Vercel.
+ * Dependendo do encaminhamento, req.url pode chegar com /api, sem /api
+ * ou com o prefixo duplicado. O Express registra as rotas sob /api.
  */
 export default function handler(req: Request, res: Response) {
     const requestUrl = req.url ?? "/";
-    const pathname = requestUrl.split("?")[0] ?? "/";
+    const queryIndex = requestUrl.indexOf("?");
+    const pathname = queryIndex === -1 ? requestUrl : requestUrl.slice(0, queryIndex);
+    const query = queryIndex === -1 ? "" : requestUrl.slice(queryIndex);
 
-    if (pathname !== "/api" && !pathname.startsWith("/api/")) {
-        req.url = `/api${requestUrl.startsWith("/") ? requestUrl : `/${requestUrl}`}`;
+    let normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+
+    // Evita prefixos duplicados, por exemplo /api/api/users/login.
+    while (normalizedPath === "/api/api" || normalizedPath.startsWith("/api/api/")) {
+        normalizedPath = normalizedPath.slice(4);
     }
 
+    // Garante o prefixo esperado pelo Express.
+    if (normalizedPath !== "/api" && !normalizedPath.startsWith("/api/")) {
+        normalizedPath = `/api${normalizedPath}`;
+    }
+
+    req.url = `${normalizedPath}${query}`;
     return app(req, res);
 }
