@@ -77,12 +77,12 @@ const messageController = {
     async create(req: Request, res: Response) {
         try {
             const {
-                user,
                 content,
                 type,
                 media,
                 replyTo
             } = req.body;
+            const user = res.locals.authUserId as string;
 
             const roomId = req.params["roomId"];
 
@@ -92,16 +92,6 @@ const messageController = {
                     error: {
                         status: 400,
                         message: "ID da sala é obrigatório."
-                    }
-                });
-            }
-
-            if (!user) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        status: 400,
-                        message: "User é obrigatório."
                     }
                 });
             }
@@ -216,6 +206,21 @@ const messageController = {
                     error: {
                         status: 404,
                         message: "Mensagem não encontrada."
+                    }
+                });
+            }
+
+            const room = await roomModel.findById(message.room);
+            const userId = String(res.locals.authUserId);
+            const isAuthor = message.user.toString() === userId;
+            const isRoomOwner = Boolean(room && room.owner.toString() === userId);
+
+            if (!isAuthor && !isRoomOwner) {
+                return res.status(403).json({
+                    success: false,
+                    error: {
+                        status: 403,
+                        message: "Você não tem permissão para excluir esta mensagem."
                     }
                 });
             }
