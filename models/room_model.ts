@@ -23,8 +23,7 @@ const roomSchema = new mongoose.Schema(
             uppercase: true,
             match: /^[A-Z0-9]{4}-[A-Z0-9]{4}$/,
             unique: true,
-            sparse: true,
-            index: true
+            sparse: true
         },
 
         broadcast: {
