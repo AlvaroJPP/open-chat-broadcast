@@ -514,7 +514,11 @@ function RoomsPage() {
         onRefresh={handleRefresh}
         onJoin={(id) => {
           const selectedRoom = rooms.find((room) => room._id === id)
-          void handleJoinRoom(id, selectedRoom?.inviteCode)
+          if (selectedRoom?.inviteCode) {
+            void handleJoinByCode(selectedRoom.inviteCode)
+          } else {
+            setError('O código desta sala ainda está sendo preparado. Atualize a lista e tente novamente.')
+          }
         }}
         onCreate={() => {
           setError(null)
