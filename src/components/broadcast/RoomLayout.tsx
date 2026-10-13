@@ -26,9 +26,11 @@ room: RoomInfo
 participants: Participant[]
 messages: ChatMessageData[]
 onKickParticipant?: (participantId: string) => void
+onTransferOwnership?: (participantId: string) => void
+onToggleMuteParticipant?: (participantId: string, muted: boolean) => void
 }
 
-export function RoomLayout({room, participants, messages, onKickParticipant}: RoomLayoutProps) {
+export function RoomLayout({room, participants, messages, onKickParticipant, onTransferOwnership, onToggleMuteParticipant}: RoomLayoutProps) {
 const fallbackCurrentUser: Participant = {
 id: "unknown",
 name: "Participante",
@@ -164,6 +166,8 @@ onOpenParticipants={() => setMenuOpen(true)}
         room={room}
         canManageParticipants={!!currentUser.isHost}
         onKickParticipant={onKickParticipant}
+        onTransferOwnership={onTransferOwnership}
+        onToggleMuteParticipant={onToggleMuteParticipant}
       />
     )}
 
@@ -226,6 +230,8 @@ onOpenParticipants={() => setMenuOpen(true)}
       onClose={() => setMenuOpen(false)}
       canManageParticipants={!!currentUser.isHost}
       onKickParticipant={onKickParticipant}
+      onTransferOwnership={onTransferOwnership}
+      onToggleMuteParticipant={onToggleMuteParticipant}
     />
   )}
 </div>
