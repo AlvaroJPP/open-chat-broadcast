@@ -17,6 +17,16 @@ const roomSchema = new mongoose.Schema(
             index: true
         },
 
+        inviteCode: {
+            type: String,
+            trim: true,
+            uppercase: true,
+            match: /^[A-Z0-9]{4}-[A-Z0-9]{4}$/,
+            unique: true,
+            sparse: true,
+            index: true
+        },
+
         broadcast: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Broadcast",
