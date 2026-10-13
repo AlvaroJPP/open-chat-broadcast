@@ -12,7 +12,9 @@ var HOST = process.env["HOST"] || "0.0.0.0";
 var MONGODB_URI = process.env["MONGODB_URI"] || "mongodb://127.0.0.1:27017/app";
 var defaultAllowedOrigins = [
   "https://localhost:5175",
-  "http://192.168.1.101:5175"
+  "http://192.168.1.101:5175",
+  "https://open-chat-broadcast-kappa.vercel.app"
+  
 ];
 var configuredOrigins = [
   ...process.env["FRONTEND_URL"] ? [process.env["FRONTEND_URL"].trim()] : [],
