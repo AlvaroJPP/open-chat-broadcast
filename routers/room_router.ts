@@ -8,6 +8,7 @@ roomRouter.use(requireAuth);
 
 roomRouter.post("/", roomController.create);
 roomRouter.get("/", roomController.findAll);
+roomRouter.get("/code/:code", roomController.findByCode);
 roomRouter.get("/:id", roomController.findById);
 roomRouter.post("/:id/join", roomController.join);
 roomRouter.post("/:id/leave", roomController.leave);
