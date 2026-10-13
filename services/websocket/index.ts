@@ -12,6 +12,8 @@ import {
   removeOfflineParticipant,
   broadcastRoomParticipants,
   kickParticipant,
+  transferRoomOwnership,
+  setParticipantMuted,
 } from "./room.js";
 
 import { sendMessage } from "./message.js";
@@ -82,6 +84,12 @@ async function handleMessage(
       }
       case "room:kick":
         await kickParticipant(client, payload.data, clients);
+        break;
+      case "room:owner:transfer":
+        await transferRoomOwnership(client, payload.data, clients);
+        break;
+      case "room:mute":
+        await setParticipantMuted(client, payload.data, clients);
         break;
 
       case "message:send":
