@@ -184,6 +184,11 @@ export async function joinRoom(
         return;
     }
 
+    if (!client.userId || client.userId !== data.user) {
+        send(client.socket, "room:error", { message: "Autenticação necessária ou identidade inválida." });
+        return;
+    }
+
     const room = await roomModel.findById(data.room);
 
     if (!room) {
