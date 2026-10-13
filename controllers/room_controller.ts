@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 
 import roomModel from "../models/room_model.ts";
+import { removeParticipant } from "../services/websocket/room.ts";
 
 
 type RoomParticipant = {
@@ -318,48 +319,14 @@ const roomController = {
                 });
             }
 
-            const wasOwner =
-                room.owner.toString() === user;
+            // Usa a rotina compartilhada com o WebSocket para evitar condições de corrida.
+            await removeParticipant(user, id);
 
-            // Remove o participante
-            room.participants.splice(
-                participantIndex,
-                1
-            );
-
-            // Se era o proprietário
-            if (wasOwner) {
-                if (room.participants.length === 0) {
-                    // Não existem mais participantes
-                    room.status = "closed";
-                } else {
-                    // O participante mais antigo assume a sala
-                    const oldestParticipant =
-                        [...room.participants].sort(
-                            (
-                                a: RoomParticipant,
-                                b: RoomParticipant
-                            ) =>
-                                a.joinedAt.getTime() -
-                                b.joinedAt.getTime()
-                        )[0];
-
-                    room.owner =
-                        oldestParticipant.user;
-
-                    room.status = "active";
-                }
-            } else if (
-                room.participants.length === 0
-            ) {
-                room.status = "closed";
-            }
-
-            await room.save();
+            const updatedRoom = await roomModel.findById(id);
 
             return res.status(200).json({
                 success: true,
-                data: room
+                data: updatedRoom
             });
         } catch (error) {
             console.error(
