@@ -4,6 +4,7 @@ import broadcastModel from "../../models/broadcast_model.ts";
 import roomModel from "../../models/room_model.ts";
 
 import type { ConnectedClient } from "./room.ts";
+import realtimeBus from "./realtime_bus.js";
 
 type BroadcastData = {
     user: string;
@@ -188,6 +189,8 @@ export async function startBroadcast(
         );
     }
 
+    await realtimeBus.publish({ event: "broadcast:start", data: { broadcast: broadcast._id.toString(), room: roomId, user: data.user, startedAt: broadcast.startedAt }, roomId });
+
     console.log(
         `[WEBSOCKET] Broadcast ${data.broadcast} iniciado na sala ${roomId}.`
     );
@@ -299,6 +302,8 @@ export async function endBroadcast(
             }
         );
     }
+
+    await realtimeBus.publish({ event: "broadcast:end", data: { broadcast: broadcast._id.toString(), room: roomId, user: data.user, endedAt: broadcast.endedAt }, roomId });
 
     console.log(
         `[WEBSOCKET] Broadcast ${data.broadcast} encerrado na sala ${roomId}.`
