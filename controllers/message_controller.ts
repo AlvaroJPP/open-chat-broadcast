@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 
 import messageModel from "../models/message_model.js";
 import roomModel from "../models/room_model.js";
