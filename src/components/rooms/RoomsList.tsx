@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Loader2, RefreshCw, Search, Users } from 'lucide-react'
+import { Loader2, RefreshCw, Search, Users, LockKeyhole, Globe } from 'lucide-react'
 
 export interface RoomListItem {
   _id: string
@@ -7,6 +7,7 @@ export interface RoomListItem {
   maxParticipants: number
   participants?: unknown[]
   status: 'waiting' | 'active' | 'closed'
+  visibility?: 'public' | 'private'
 }
 
 type Filter = 'all' | 'open' | 'closed'
