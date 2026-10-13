@@ -4,6 +4,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import userModel from "../../models/user_model.ts";
 import mongodb from "../../config/mongodb.ts";
 import realtimeBus from "./realtime_bus.js";
+import { readCookie, sessionCookieName, verifySessionToken } from "../auth/session.ts";
+import config from "../../config/config.ts";
 
 import {
   ConnectedClient,
@@ -142,6 +144,20 @@ function start(server: HttpServer): WebSocketServer {
   const websocketServer = new WebSocketServer({
     server,
     path: process.env["VERCEL"] ? "/api/ws" : "/ws",
+    maxPayload: 64 * 1024,
+    verifyClient: (info, done) => {
+      if (info.origin && !config.http.allowedOrigins.includes(info.origin)) {
+        console.warn("[SECURITY] WebSocket rejeitado por origem não permitida.");
+        done(false, 403, "Origem não permitida");
+        return;
+      }
+      const token = readCookie(info.req.headers.cookie, sessionCookieName);
+      if (!verifySessionToken(token)) {
+        done(false, 401, "Autenticação necessária");
+        return;
+      }
+      done(true);
+    },
   });
 
   const clients = new Set<ConnectedClient>();
@@ -229,14 +245,15 @@ function start(server: HttpServer): WebSocketServer {
     offlineTimers.clear();
   });
 
-  websocketServer.on("connection", (socket: WebSocket) => {
+  websocketServer.on("connection", (socket: WebSocket, request) => {
     const heartbeatSocket = socket as HeartbeatSocket;
     heartbeatSocket.isAlive = true;
     socket.on("pong", () => {
       heartbeatSocket.isAlive = true;
     });
 
-    const client: ConnectedClient = { socket, userId: null, roomId: null };
+    const sessionToken = readCookie(request.headers.cookie, sessionCookieName);
+    const client: ConnectedClient = { socket, userId: verifySessionToken(sessionToken), roomId: null };
     clients.add(client);
 
     console.log(`[WEBSOCKET] Cliente conectado. Clientes: ${clients.size}`);
