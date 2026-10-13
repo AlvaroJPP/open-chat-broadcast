@@ -23,6 +23,8 @@ return ( <aside className="flex w-72 shrink-0 flex-col overflow-hidden border bo
      liveIds={liveIds}
      canManageParticipants={canManageParticipants}
      onKickParticipant={onKickParticipant}
+     canManageParticipants={canManageParticipants}
+     onKickParticipant={onKickParticipant}
    > <RoomPanel room={room} /> </ParticipantsPanel> </aside>
 )
 }
