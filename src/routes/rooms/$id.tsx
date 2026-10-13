@@ -23,6 +23,7 @@ type ApiParticipant = {
     user: string | ApiUser;
     joinedAt: string;
     online?: boolean;
+    muted?: boolean;
 };
 
 type ApiRoom = {
@@ -116,7 +117,7 @@ function normalizeParticipants(
 
             avatarColor: "bg-primary",
 
-            micMuted: false,
+            micMuted: participant.muted === true,
 
             isSharingScreen: false,
         };
@@ -465,6 +466,30 @@ function RoomPage() {
                                 return;
                             }
 
+                            if (message.event === "room:owner:updated") {
+                                const payload = message.data as { room?: string; owner?: string };
+                                if (payload.room === id && payload.owner) {
+                                    ownerIdRef.current = payload.owner;
+                                    setParticipants(previous => previous.map(participant => ({
+                                        ...participant,
+                                        isHost: participant.id === payload.owner,
+                                    })));
+                                }
+                                return;
+                            }
+
+                            if (message.event === "room:owner:success" || message.event === "room:mute:success") {
+                                const payload = message.data as { message?: string };
+                                window.alert(payload.message ?? "Alteração realizada.");
+                                return;
+                            }
+
+                            if (message.event === "room:owner:error" || message.event === "room:mute:error") {
+                                const payload = message.data as { message?: string };
+                                window.alert(payload.message ?? "Não foi possível realizar a alteração.");
+                                return;
+                            }
+
                             /*
                              * Lista completa de participantes.
                              */
@@ -701,6 +726,14 @@ function RoomPage() {
             messages={messages}
             onKickParticipant={(participantId) => {
                 websocketRef.current?.send("room:kick", { room: id, user: participantId });
+            }}
+            onTransferOwnership={(participantId) => {
+                if (window.confirm("Transferir a propriedade da sala para este participante? Você deixará de ser o proprietário.")) {
+                    websocketRef.current?.send("room:owner:transfer", { room: id, user: participantId });
+                }
+            }}
+            onToggleMuteParticipant={(participantId, muted) => {
+                websocketRef.current?.send("room:mute", { room: id, user: participantId, muted });
             }}
         />
     );
