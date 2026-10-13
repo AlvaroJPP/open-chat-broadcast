@@ -35,6 +35,11 @@ const roomSchema = new mongoose.Schema(
                 joinedAt: {
                     type: Date,
                     default: Date.now // Data e hora em que entrou na sala
+                },
+
+                muted: {
+                    type: Boolean,
+                    default: false // Microfone silenciado pelo proprietário
                 }
             }
         ],
