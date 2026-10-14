@@ -59,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/guest': typeof GuestRoute
   '/rooms/$id': typeof RoomsIdRoute
   '/rooms': typeof RoomsIndexRoute
 }
@@ -67,6 +68,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/guest': typeof GuestRoute
   '/rooms/$id': typeof RoomsIdRoute
   '/rooms/': typeof RoomsIndexRoute
 }
