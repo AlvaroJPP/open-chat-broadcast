@@ -26,6 +26,7 @@ export interface IUser {
     avatar?: string | null;
     pwd: string;
     isMaster: boolean;
+    isGuest: boolean;
     status: UserStatus;
     createdAt: Date;
     updatedAt: Date;
@@ -91,6 +92,11 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
         isMaster: {
             type: Boolean,
             default: false,
+        },
+        isGuest: {
+            type: Boolean,
+            default: false,
+            index: true,
         },
         status: {
             type: String,
