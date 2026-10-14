@@ -69,7 +69,6 @@ function serializeUser(
 
     return {
         _id: user._id.toString(),
-        email: user.email,
         nickname: user.nickname,
         avatar: user.avatar ?? null,
         status: user.status,
@@ -142,7 +141,7 @@ export async function broadcastRoomParticipants(
         .findById(roomId)
         .populate(
             "participants.user",
-            "_id email nickname avatar status isGuest"
+            "_id nickname avatar status isGuest"
         );
 
     if (!populatedRoom) {
@@ -224,7 +223,7 @@ export async function joinRoom(
         .findById(data.room)
         .populate(
             "participants.user",
-            "_id email nickname avatar status isGuest"
+            "_id nickname avatar status isGuest"
         );
 
     const joinedUser = await userModel.findById(data.user);
@@ -232,7 +231,6 @@ export async function joinRoom(
     const serializedJoinedUser = joinedUser
         ? {
               _id: joinedUser._id.toString(),
-              email: joinedUser.email,
               nickname: joinedUser.nickname,
               avatar: joinedUser.avatar ?? null,
               status: joinedUser.status,
@@ -333,7 +331,6 @@ export async function leaveRoom(
     const serializedLeavingUser = leavingUser
         ? {
               _id: leavingUser._id.toString(),
-              email: leavingUser.email,
               nickname: leavingUser.nickname,
               avatar: leavingUser.avatar ?? null,
               status: leavingUser.status,
@@ -350,7 +347,7 @@ export async function leaveRoom(
         .findById(data.room)
         .populate(
             "participants.user",
-            "_id email nickname avatar status isGuest"
+            "_id nickname avatar status isGuest"
         );
 
     const participantsPayload = updatedRoom
