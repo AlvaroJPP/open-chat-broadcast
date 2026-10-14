@@ -224,7 +224,7 @@ export async function joinRoom(
         .findById(data.room)
         .populate(
             "participants.user",
-            "_id email nickname avatar status"
+            "_id email nickname avatar status isGuest"
         );
 
     const joinedUser = await userModel.findById(data.user);
@@ -236,6 +236,7 @@ export async function joinRoom(
               nickname: joinedUser.nickname,
               avatar: joinedUser.avatar ?? null,
               status: joinedUser.status,
+              isGuest: joinedUser.isGuest === true,
           }
         : undefined;
 
@@ -336,6 +337,7 @@ export async function leaveRoom(
               nickname: leavingUser.nickname,
               avatar: leavingUser.avatar ?? null,
               status: leavingUser.status,
+              isGuest: leavingUser.isGuest === true,
           }
         : undefined;
 
@@ -348,7 +350,7 @@ export async function leaveRoom(
         .findById(data.room)
         .populate(
             "participants.user",
-            "_id email nickname avatar status"
+            "_id email nickname avatar status isGuest"
         );
 
     const participantsPayload = updatedRoom
