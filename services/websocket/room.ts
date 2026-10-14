@@ -186,9 +186,16 @@ export async function joinRoom(
         return;
     }
 
-    if (!client.userId || client.userId !== data.user) {
+    if (!client.userId) {
         send(client.socket, "room:error", { message: "Autenticação necessária ou identidade inválida." });
         return;
+    }
+
+    // A identidade validada pelo cookie HttpOnly é a fonte de verdade.
+    // O localStorage pode conter um ID antigo após a entrada como convidado.
+    if (client.userId !== data.user) {
+        console.warn(`[WEBSOCKET] ID do cliente diverge da sessão; usando a identidade autenticada ${client.userId}.`);
+        data = { ...data, user: client.userId };
     }
 
     const room = await roomModel.findById(data.room);
