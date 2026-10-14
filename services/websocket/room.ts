@@ -466,16 +466,39 @@ export async function removeParticipant(
     }
 
     if (wasOwner) {
-        const oldestParticipant = [...roomAfterRemoval.participants].sort(
-            (a: RoomParticipant, b: RoomParticipant) =>
-                new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
-        )[0];
+        const remainingUserIds = roomAfterRemoval.participants.map(
+            (participant: RoomParticipant) => String((participant.user as any)?._id ?? participant.user)
+        );
+        const registeredUsers = await userModel
+            .find({ _id: { $in: remainingUserIds }, isGuest: { $ne: true } })
+            .select("_id");
+        const registeredIds = new Set(registeredUsers.map((user) => user._id.toString()));
+        const oldestRegisteredParticipant = [...roomAfterRemoval.participants]
+            .filter((participant: RoomParticipant) =>
+                registeredIds.has(String((participant.user as any)?._id ?? participant.user))
+            )
+            .sort(
+                (a: RoomParticipant, b: RoomParticipant) =>
+                    new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
+            )[0];
 
-        if (oldestParticipant) {
+        if (oldestRegisteredParticipant) {
             await roomModel.updateOne(
                 { _id: roomId },
-                { $set: { owner: oldestParticipant.user, status: "active" } }
+                { $set: { owner: oldestRegisteredParticipant.user, status: "active" } }
             );
+        } else {
+            // Uma sala não pode ficar sob controle de um convidado temporário.
+            await roomModel.updateOne(
+                { _id: roomId },
+                { $set: { status: "closed", participants: [] } }
+            );
+            await userModel.deleteMany({
+                _id: { $in: remainingUserIds },
+                isGuest: true,
+            });
+            console.log(`[ROOM] Sala ${roomId} encerrada: não há proprietários registrados disponíveis.`);
+            return;
         }
     }
 
@@ -544,6 +567,8 @@ export async function transferRoomOwnership(
     if (!room) return fail("Sala não encontrada.");
     if (room.owner.toString() !== client.userId) return fail("Somente o proprietário atual pode transferir a propriedade.");
     if (data.user === client.userId) return fail("Você já é o proprietário desta sala.");
+    const targetUser = await userModel.findById(data.user).select("isGuest");
+    if (!targetUser || targetUser.isGuest) return fail("Um participante temporário não pode ser proprietário da sala.");
     const targetIsParticipant = room.participants.some(
         (p: RoomParticipant) => getParticipantUserId(p.user) === data.user
     );
