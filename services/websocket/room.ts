@@ -37,6 +37,7 @@ type ParticipantUser = {
     nickname?: string | undefined;
     avatar?: string | null | undefined;
     status?: string | undefined;
+    isGuest?: boolean | undefined;
 };
 
 
@@ -59,6 +60,7 @@ function serializeUser(
               nickname?: string;
               avatar?: string | null;
               status?: string;
+              isGuest?: boolean;
           }
 ): ParticipantUser | string {
     if (typeof user === "string") {
@@ -71,6 +73,7 @@ function serializeUser(
         nickname: user.nickname,
         avatar: user.avatar ?? null,
         status: user.status,
+        isGuest: user.isGuest === true,
     };
 }
 
@@ -139,7 +142,7 @@ export async function broadcastRoomParticipants(
         .findById(roomId)
         .populate(
             "participants.user",
-            "_id email nickname avatar status"
+            "_id email nickname avatar status isGuest"
         );
 
     if (!populatedRoom) {
@@ -452,6 +455,10 @@ export async function removeParticipant(
             { _id: roomId },
             { $set: { status: "closed", participants: [] } }
         );
+        const departingUser = await userModel.findById(userId).select("isGuest");
+        if (departingUser?.isGuest) {
+            await userModel.findByIdAndDelete(userId);
+        }
         console.log(`[ROOM] Sala ${roomId} encerrada: não há participantes.`);
         return;
     }
@@ -468,6 +475,13 @@ export async function removeParticipant(
                 { $set: { owner: oldestParticipant.user, status: "active" } }
             );
         }
+    }
+
+    // Contas de convidados existem apenas enquanto participam de uma sala.
+    const departingUser = await userModel.findById(userId).select("isGuest");
+    if (departingUser?.isGuest) {
+        await userModel.findByIdAndDelete(userId);
+        console.log(`[ROOM] Participante temporário ${userId} removido do banco.`);
     }
 }
 
