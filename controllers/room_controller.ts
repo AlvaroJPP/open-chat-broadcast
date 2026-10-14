@@ -301,8 +301,8 @@ const roomController = {
             const room =
                 await roomModel
                     .findById(id)
-                    .populate("owner")
-                    .populate("participants.user");
+                    .populate("owner", "_id nickname avatar status isGuest")
+                    .populate("participants.user", "_id nickname avatar status isGuest");
 
             if (!room) {
                 return res.status(404).json({
@@ -316,7 +316,13 @@ const roomController = {
 
             const userId = String(res.locals.authUserId);
             const requestingUser = await userModel.findById(userId).select("isGuest");
-            const isGuest = requestingUser?.isGuest === true;
+            if (!requestingUser) {
+                return res.status(401).json({
+                    success: false,
+                    error: { status: 401, message: "Sessão inválida. Entre novamente." }
+                });
+            }
+            const isGuest = requestingUser.isGuest === true;
             const isRoomParticipant = room.participants.some((participant: any) =>
                 String(participant.user?._id ?? participant.user) === userId
             );
