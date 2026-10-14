@@ -205,15 +205,21 @@ function RoomPage() {
                 return;
             }
 
-            const joinResponse =
-                await fetch(
+            // Participantes temporários já são adicionados à sala pelo endpoint
+            // /rooms/guest-join. Não devem chamar /:id/join, reservado a contas registradas.
+            const storedUser = JSON.parse(
+                localStorage.getItem("currentUser") ?? "null"
+            ) as { isGuest?: boolean } | null;
+            const isGuest = storedUser?.isGuest === true;
+
+            if (!isGuest) {
+                const joinResponse = await fetch(
                     `${API_BASE_URL}/rooms/${id}/join`,
                     {
                         method: "POST",
                         credentials: "include",
                         headers: {
-                            "Content-Type":
-                                "application/json",
+                            "Content-Type": "application/json",
                         },
                         body: JSON.stringify({
                             user: currentUserId,
@@ -221,21 +227,16 @@ function RoomPage() {
                     }
                 );
 
-            if (
-                !joinResponse.ok &&
-                joinResponse.status !== 409
-            ) {
-                const joinData =
-                    (await joinResponse
+                if (!joinResponse.ok && joinResponse.status !== 409) {
+                    const joinData = (await joinResponse
                         .json()
-                        .catch(() => null)) as
-                        | ApiResponse<unknown>
-                        | null;
+                        .catch(() => null)) as ApiResponse<unknown> | null;
 
-                throw new Error(
-                    joinData?.error?.message ??
-                        `Não foi possível entrar na sala. HTTP ${joinResponse.status}`
-                );
+                    throw new Error(
+                        joinData?.error?.message ??
+                            `Não foi possível entrar na sala. HTTP ${joinResponse.status}`
+                    );
+                }
             }
 
             const roomResponse =
