@@ -8,4 +8,4 @@ export const USE_MOCK_DATA =
 // Sem valor configurado, fica vazio em vez de escolher silenciosamente outro backend.
 export const API_BASE_URL = (import.meta.env["VITE_API_BASE_URL"] ?? "")
   .trim()
-  .replace(/\\/+$/, "")
+  .replace(/\/+$/, "")
