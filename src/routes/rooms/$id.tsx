@@ -454,6 +454,29 @@ function RoomPage() {
                 unsubscribe =
                     websocket.onMessage(
                         (message) => {
+                            if (message.event === "room:joined") {
+                                const payload = message.data as { room?: string; user?: { _id?: string } | string };
+                                const authenticatedId = typeof payload.user === "string"
+                                    ? payload.user
+                                    : payload.user?._id;
+                                if (payload.room === id && authenticatedId && authenticatedId !== safeCurrentUserId) {
+                                    try {
+                                        const stored = JSON.parse(localStorage.getItem("currentUser") ?? "null") as Record<string, unknown> | null;
+                                        if (stored) {
+                                            localStorage.setItem("currentUser", JSON.stringify({
+                                                ...stored,
+                                                _id: authenticatedId,
+                                            }));
+                                            // Recarrega os dados da sala com a identidade que o servidor autenticou.
+                                            window.location.reload();
+                                        }
+                                    } catch (error) {
+                                        console.error("[AUTH] Não foi possível sincronizar a identidade autenticada:", error);
+                                    }
+                                }
+                                return;
+                            }
+
                             if (message.event === "room:kicked") {
                                 const payload = message.data as { room?: string; message?: string };
                                 if (!payload.room || payload.room === id) {
