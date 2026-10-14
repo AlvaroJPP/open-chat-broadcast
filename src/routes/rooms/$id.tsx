@@ -17,6 +17,7 @@ type ApiUser = {
     nickname?: string;
     avatar?: string | null;
     status?: string;
+    isGuest?: boolean;
 };
 
 type ApiParticipant = {
@@ -95,10 +96,11 @@ function normalizeParticipants(
                 ? participant.user
                 : participant.user._id;
 
-        const participantName =
+        const baseName =
             user?.nickname ??
             user?.email ??
             `Usuário ${userId.slice(-4)}`;
+        const participantName = user?.isGuest ? `${baseName} (convidado)` : baseName;
 
         return {
             id: userId,
@@ -148,7 +150,9 @@ function getUserName(
         typeof user !== "string"
     ) {
         return (
-            user.nickname ??
+            user.isGuest && user.nickname
+                ? `${user.nickname} (convidado)`
+                : user.nickname ??
             user.email ??
             (fallbackId
                 ? `Usuário ${fallbackId.slice(-4)}`
