@@ -257,7 +257,10 @@ function start(server: HttpServer): WebSocketServer {
     clients.add(client);
 
     console.log(`[WEBSOCKET] Cliente conectado. Clientes: ${clients.size}`);
-    send(socket, "connected", { message: "Conexão WebSocket estabelecida." });
+    send(socket, "connected", {
+      message: "Conexão WebSocket estabelecida.",
+      userId: client.userId,
+    });
 
     let messageQueue: Promise<void> = Promise.resolve();
 
