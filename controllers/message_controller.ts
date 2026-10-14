@@ -64,7 +64,7 @@ const messageController = {
                     .find({
                         room: roomId
                     })
-                    .populate("user")
+                    .populate("user", "_id nickname avatar status isGuest")
                     .sort({
                         createdAt: 1
                     });
