@@ -1,6 +1,7 @@
 import userController from "../controllers/user_controller.ts";
 import authController from "../controllers/auth_controller.ts";
 import { requireAuth } from "../middleware/require_auth.ts";
+import { requireRegisteredUser } from "../middleware/require_registered_user.ts";
 
 import { Router } from "express";
 
@@ -10,8 +11,9 @@ const userRouter = Router();
 userRouter.post("/", userController.create);
 userRouter.post("/login", authController.login);
 
-// Demais operações exigem uma sessão válida.
+// Operações de conta exigem sessão e uma conta registrada (não temporária).
 userRouter.use(requireAuth);
+userRouter.use(requireRegisteredUser);
 
 userRouter.get("/:id", userController.findById);
 userRouter.patch("/:id", userController.update);
