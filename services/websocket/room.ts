@@ -432,9 +432,18 @@ export async function removeParticipant(
     userId: string,
     roomId: string
 ): Promise<void> {
+    // O convidado é uma identidade temporária: sua saída deve apagar o documento
+    // mesmo se outra rotina já tiver removido sua referência da sala.
+    const departingUser = await userModel.findById(userId).select("isGuest");
+    const isGuest = departingUser?.isGuest === true;
+
     const roomBeforeRemoval = await roomModel.findById(roomId);
 
     if (!roomBeforeRemoval) {
+        if (isGuest) {
+            await userModel.findByIdAndDelete(userId);
+            console.log(`[ROOM] Participante temporário ${userId} removido: sala não encontrada.`);
+        }
         return;
     }
 
@@ -447,7 +456,21 @@ export async function removeParticipant(
     );
 
     if (removal.modifiedCount === 0) {
+        // Uma saída duplicada (HTTP + WebSocket, por exemplo) não pode deixar
+        // um usuário temporário órfão na coleção users.
+        if (isGuest) {
+            await userModel.findByIdAndDelete(userId);
+            console.log(`[ROOM] Participante temporário ${userId} removido do banco.`);
+        }
         return;
+    }
+
+    // Apague o convidado assim que sua referência for removida da sala.
+    // Fazer isso antes dos retornos abaixo evita deixar convidados no banco
+    // quando a sala é encerrada ou quando não há proprietário registrado.
+    if (isGuest) {
+        await userModel.findByIdAndDelete(userId);
+        console.log(`[ROOM] Participante temporário ${userId} removido do banco.`);
     }
 
     const roomAfterRemoval = await roomModel.findById(roomId);
@@ -461,10 +484,6 @@ export async function removeParticipant(
             { _id: roomId },
             { $set: { status: "closed", participants: [] } }
         );
-        const departingUser = await userModel.findById(userId).select("isGuest");
-        if (departingUser?.isGuest) {
-            await userModel.findByIdAndDelete(userId);
-        }
         console.log(`[ROOM] Sala ${roomId} encerrada: não há participantes.`);
         return;
     }
@@ -502,18 +521,9 @@ export async function removeParticipant(
                 isGuest: true,
             });
             console.log(`[ROOM] Sala ${roomId} encerrada: não há proprietários registrados disponíveis.`);
-            return;
         }
     }
-
-    // Contas de convidados existem apenas enquanto participam de uma sala.
-    const departingUser = await userModel.findById(userId).select("isGuest");
-    if (departingUser?.isGuest) {
-        await userModel.findByIdAndDelete(userId);
-        console.log(`[ROOM] Participante temporário ${userId} removido do banco.`);
-    }
 }
-
 
 /** Expulsa um participante e valida no servidor se o solicitante é o proprietário. */
 export async function kickParticipant(
