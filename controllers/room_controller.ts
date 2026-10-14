@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
-import { randomInt } from "node:crypto";
+import { randomBytes, randomInt, randomUUID } from "node:crypto";
 
 import roomModel from "../models/room_model.ts";
+import userModel from "../models/user_model.ts";
+import { createSessionToken, sessionCookieName, sessionCookieOptions } from "../services/auth/session.ts";
 import { removeParticipant } from "../services/websocket/room.ts";
 
 
@@ -30,6 +32,110 @@ type RoomParticipant = {
 const roomController = {
     model: roomModel,
 
+    // Entrada temporária por código, sem cadastro ou login tradicional.
+    async guestJoin(req: Request, res: Response) {
+        let createdGuestId: string | null = null;
+
+        try {
+            const code = String(req.body?.code ?? "").trim().toUpperCase();
+            const nickname = String(req.body?.nickname ?? "").trim().toLowerCase();
+
+            if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
+                return res.status(400).json({
+                    success: false,
+                    error: { status: 400, message: "Código inválido. Use o formato XXXX-XXXX." }
+                });
+            }
+
+            if (nickname.length < 3 || nickname.length > 50 || !/^[a-zA-Z0-9_.]+$/.test(nickname)) {
+                return res.status(400).json({
+                    success: false,
+                    error: { status: 400, message: "O apelido deve ter de 3 a 50 caracteres e usar apenas letras, números, ponto ou underline." }
+                });
+            }
+
+            const room = await roomModel.findOne({ inviteCode: code });
+
+            if (!room || room.status === "closed") {
+                return res.status(404).json({
+                    success: false,
+                    error: { status: 404, message: "Sala não encontrada ou já encerrada." }
+                });
+            }
+
+            if (room.participants.length >= room.maxParticipants) {
+                return res.status(409).json({
+                    success: false,
+                    error: { status: 409, message: "A sala atingiu o limite de participantes." }
+                });
+            }
+
+            const existingNickname = await userModel.exists({ nickname });
+            if (existingNickname) {
+                return res.status(409).json({
+                    success: false,
+                    error: { status: 409, message: "Esse apelido já está em uso. Escolha outro." }
+                });
+            }
+
+            const guest = await userModel.create({
+                email: `guest-${randomUUID()}@guest.ocb.invalid`,
+                nickname,
+                pwd: randomBytes(20).toString("hex"),
+                isGuest: true,
+                isMaster: false,
+                status: "offline"
+            });
+            createdGuestId = guest._id.toString();
+
+            room.participants.push({
+                user: guest._id,
+                joinedAt: new Date()
+            });
+            room.status = "active";
+            await room.save();
+
+            res.cookie(
+                sessionCookieName,
+                createSessionToken(createdGuestId),
+                sessionCookieOptions
+            );
+
+            return res.status(201).json({
+                success: true,
+                data: {
+                    user: {
+                        _id: createdGuestId,
+                        nickname: guest.nickname,
+                        avatar: guest.avatar ?? null,
+                        isGuest: true
+                    },
+                    room: {
+                        _id: room._id.toString(),
+                        name: room.name,
+                        inviteCode: room.inviteCode
+                    }
+                }
+            });
+        } catch (error) {
+            if (createdGuestId) {
+                await userModel.findByIdAndDelete(createdGuestId).catch(() => undefined);
+            }
+
+            if ((error as { code?: number })?.code === 11000) {
+                return res.status(409).json({
+                    success: false,
+                    error: { status: 409, message: "Esse apelido já está em uso. Escolha outro." }
+                });
+            }
+
+            console.error("[ROOM] Erro ao criar participante temporário:", error);
+            return res.status(500).json({
+                success: false,
+                error: { status: 500, message: "Não foi possível entrar como participante temporário." }
+            });
+        }
+    },
 
     // Criar uma sala
     async create(req: Request, res: Response) {
