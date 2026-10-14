@@ -130,7 +130,7 @@ export async function sendMessage(
     const message =
         await messageModel
             .findById(createdMessage._id)
-            .populate("user");
+            .populate("user", "_id nickname avatar status isGuest");
 
     const messageData =
         message?.toObject() ?? createdMessage.toObject();
