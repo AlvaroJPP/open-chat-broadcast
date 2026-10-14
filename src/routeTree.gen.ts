@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as GuestRouteImport } from './routes/guest'
 import { Route as RoomsIndexRouteImport } from './routes/rooms/index'
 import { Route as RoomsIdRouteImport } from './routes/rooms/$id'
 
@@ -30,6 +31,11 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
   path: '/auth/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuestRoute = GuestRouteImport.update({
+  id: '/guest',
+  path: '/guest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoomsIndexRoute = RoomsIndexRouteImport.update({
   id: '/rooms/',
   path: '/rooms/',
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/guest': typeof GuestRoute
   '/rooms/$id': typeof RoomsIdRoute
   '/rooms/': typeof RoomsIndexRoute
 }
@@ -65,14 +72,15 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth/login' | '/auth/register' | '/rooms/$id' | '/rooms/'
+  fullPaths: '/' | '/auth/login' | '/auth/register' | '/guest' | '/rooms/$id' | '/rooms/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/login' | '/auth/register' | '/rooms/$id' | '/rooms'
+  to: '/' | '/auth/login' | '/auth/register' | '/guest' | '/rooms/$id' | '/rooms'
   id:
     | '__root__'
     | '/'
     | '/auth/login'
     | '/auth/register'
+    | '/guest'
     | '/rooms/$id'
     | '/rooms/'
   fileRoutesById: FileRoutesById
@@ -81,6 +89,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
+  GuestRoute: typeof GuestRoute
   RoomsIdRoute: typeof RoomsIdRoute
   RoomsIndexRoute: typeof RoomsIndexRoute
 }
@@ -129,6 +138,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
+  GuestRoute: GuestRoute,
   RoomsIdRoute: RoomsIdRoute,
   RoomsIndexRoute: RoomsIndexRoute,
 }
