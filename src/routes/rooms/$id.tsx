@@ -719,6 +719,15 @@ function RoomPage() {
         return () => {
             unsubscribe?.();
 
+            // Ao sair da página da sala, avisa o servidor para remover
+            // imediatamente o participante temporário, sem esperar o timeout offline.
+            if (websocket.connected) {
+                websocket.send("room:leave", {
+                    user: safeCurrentUserId,
+                    room: id,
+                });
+            }
+
             if (websocketRef.current === websocket) websocketRef.current = null;
             websocket.disconnect();
         };
