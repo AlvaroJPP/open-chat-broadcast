@@ -22,6 +22,7 @@ interface User {
   nickname?: string
   email?: string
   avatar?: string | null
+  isGuest?: boolean
 }
 
 interface Room {
@@ -81,7 +82,13 @@ function RoomsPage() {
 
     try {
       const parsedUser =
-        JSON.parse(storedUser)
+        JSON.parse(storedUser) as User
+
+      if (parsedUser.isGuest) {
+        localStorage.removeItem("currentUser")
+        navigate({ to: "/guest" })
+        return
+      }
 
       setUser(parsedUser)
     } catch {
