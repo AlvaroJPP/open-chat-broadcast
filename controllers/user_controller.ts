@@ -70,11 +70,26 @@ const userController = {
                 });
             }
 
+            // Usuários autenticados só podem consultar o próprio perfil.
+            if (id !== String(res.locals.authUserId)) {
+                return res.status(403).json({
+                    success: false,
+                    error: { status: 403, message: "Você só pode consultar seu próprio perfil." },
+                });
+            }
+
             const user = await findUserById(id);
+
+            // Nunca devolver campos internos/sensíveis do documento.
+            const safeUser = user.toObject ? user.toObject() : { ...user };
+            if (safeUser && typeof safeUser === "object") {
+                delete safeUser.pwd;
+                delete safeUser.__v;
+            }
 
             return res.status(200).json({
                 success: true,
-                data: user,
+                data: safeUser,
             });
         } catch (error) {
             console.error(TAG, "Erro ao buscar usuário:", error);
