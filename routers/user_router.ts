@@ -13,7 +13,6 @@ userRouter.post("/login", authController.login);
 // Demais operações exigem uma sessão válida.
 userRouter.use(requireAuth);
 
-userRouter.get("/", userController.findAll);
 userRouter.get("/:id", userController.findById);
 userRouter.patch("/:id", userController.update);
 userRouter.delete("/:id", userController.delete);
