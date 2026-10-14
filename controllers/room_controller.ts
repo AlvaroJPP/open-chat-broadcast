@@ -315,15 +315,25 @@ const roomController = {
             }
 
             const userId = String(res.locals.authUserId);
+            const requestingUser = await userModel.findById(userId).select("isGuest");
+            const isGuest = requestingUser?.isGuest === true;
+            const isRoomParticipant = room.participants.some((participant: any) =>
+                String(participant.user?._id ?? participant.user) === userId
+            );
             const roomOwnerId = String(
                 (room.owner as any)?._id ?? room.owner
             );
             const canViewPrivateRoom =
                 room.visibility !== "private" ||
                 roomOwnerId === userId ||
-                room.participants.some((participant: any) =>
-                    String(participant.user?._id ?? participant.user) === userId
-                );
+                isRoomParticipant;
+
+            if (isGuest && !isRoomParticipant) {
+                return res.status(404).json({
+                    success: false,
+                    error: { status: 404, message: "Sala não encontrada." }
+                });
+            }
 
             if (!canViewPrivateRoom) {
                 return res.status(404).json({
