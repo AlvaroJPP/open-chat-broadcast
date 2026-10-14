@@ -1,13 +1,14 @@
-import { Cast, LogIn, UserPlus } from "lucide-react";
+import { Cast, LogIn, UserPlus, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 interface HomeHeaderProps {
     onLogin?: () => void;
     onSignUp?: () => void;
+    onGuestJoin?: () => void;
 }
 
-export function HomeHeader({ onLogin, onSignUp }: HomeHeaderProps) {
+export function HomeHeader({ onLogin, onSignUp, onGuestJoin }: HomeHeaderProps) {
     return (
         <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-card px-5">
             <div className="flex items-center gap-2.5">
@@ -20,6 +21,10 @@ export function HomeHeader({ onLogin, onSignUp }: HomeHeaderProps) {
             </div>
 
             <div className="ml-auto flex items-center gap-3">
+                <Button variant="ghost" onClick={onGuestJoin}>
+                    <Users className="size-4" />
+                    Entrar como participante
+                </Button>
                 <Button variant="outline" onClick={onLogin}>
                     <LogIn className="size-4" />
                     Entrar
