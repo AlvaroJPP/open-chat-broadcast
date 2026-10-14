@@ -8,10 +8,6 @@
   },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://open-chat-broadcast.onrender.com/api/:path*"
-    },
-    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
