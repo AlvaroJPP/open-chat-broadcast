@@ -4,6 +4,9 @@ import { requireAuth } from "../middleware/require_auth.ts";
 
 const roomRouter = Router();
 
+// Entrada pública para convidados temporários; as demais rotas exigem sessão.
+roomRouter.post("/guest-join", roomController.guestJoin);
+
 roomRouter.use(requireAuth);
 
 roomRouter.post("/", roomController.create);
