@@ -3,8 +3,11 @@ export const USE_MOCK_DATA =
   import.meta.env["VITE_USE_MOCK_DATA"] === "true" ||
   (import.meta.env.DEV && import.meta.env["VITE_USE_MOCK_DATA"] !== "false")
 
-// Em produção, usa o proxy /api da Vercel para manter a sessão no mesmo domínio.
-// Em desenvolvimento, permite configurar outra URL pelo .env.
+// A API e o WebSocket precisam usar o mesmo backend para compartilhar a sessão
+// HttpOnly. Em produção, prioriza a URL configurada no Vercel; sem ela, usa
+// o backend Render oficial em vez de uma rota /api que pode retornar NOT_FOUND.
+const configuredApiBase = import.meta.env["VITE_API_BASE_URL"]?.trim()
+
 export const API_BASE_URL = import.meta.env.PROD
-  ? "/api"
-  : import.meta.env["VITE_API_BASE_URL"]?.trim() || "/api"
+  ? (configuredApiBase || "https://open-chat-broadcast.onrender.com/api").replace(/\/+$/, "")
+  : (configuredApiBase || "/api").replace(/\/+$/, "")
